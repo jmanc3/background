@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Background Player</title>
+<style>
+  :root {
+    --bg: #f2f2ee;
+    --ink: #1b1b1b;
+    --line: #c9c9c2;
+    --accent: #1b1b1b;
+    --accent-ink: #f2f2ee;
+    --err: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --ink: #ececec;
+      --line: #3a3a3a;
+      --accent: #ececec;
+      --accent-ink: #161616;
+      --err: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  main { width: 100%; max-width: 440px; }
+  input {
+    width: 100%;
+    font: inherit;
+    padding: 14px 16px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+  }
+  input:focus-visible { border-color: var(--ink); }
+  button {
+    margin-top: 14px;
+    width: 100%;
+    font: inherit;
+    font-weight: 600;
+    padding: 14px;
+    cursor: pointer;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+  }
+  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  #msg { min-height: 1.4em; margin: 12px 2px 0; font-size: 14px; color: var(--err); }
+
+  /* Player is rendered but kept completely out of sight. */
+  #hidden-player {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 200px;
+    height: 200px;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #hidden-player iframe { width: 200px; height: 200px; border: 0; }
+</style>
+</head>
+<body>
+  <main>
+    <input id="url" type="text" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" aria-label="YouTube link">
+    <button id="toggle" type="button">Play</button>
+    <p id="msg" role="status"></p>
+  </main>
+
+  <div id="hidden-player" aria-hidden="true"></div>
+
+  <script>
+    const input = document.getElementById('url');
+    const btn = document.getElementById('toggle');
+    const msg = document.getElementById('msg');
+    const holder = document.getElementById('hidden-player');
+
+    let frame = null;
+    let currentId = null;
+    let playing = false;
+    let heardFromPlayer = false;
+    let watchdog = null;
+
+    function parseId(raw) {
+      const s = raw.trim();
+      if (/^[\w-]{11}$/.test(s)) return s;
+      try {
+        const u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s);
+        const host = u.hostname.replace(/^www\.|^m\./, '');
+        if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+        if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+          if (u.searchParams.get('v')) return u.searchParams.get('v');
+          const m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/);
+          if (m) return m[1];
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function setPlaying(p) {
+      playing = p;
+      btn.textContent = p ? 'Pause' : 'Play';
+    }
+    function setError(t) { msg.textContent = t || ''; }
+
+    function command(func, args) {
+      if (!frame || !frame.contentWindow) return;
+      frame.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
+    }
+
+    function loadVideo(id) {
+      holder.innerHTML = '';
+      heardFromPlayer = false;
+      frame = document.createElement('iframe');
+      frame.allow = 'autoplay; encrypted-media';
+      frame.title = 'Background audio';
+      frame.referrerPolicy = 'strict-origin-when-cross-origin';
+      const origin = /^https?:$/.test(location.protocol)
+        ? '&origin=' + encodeURIComponent(location.origin) : '';
+      frame.src = 'https://www.youtube.com/embed/' + id +
+        '?enablejsapi=1&autoplay=1&playsinline=1&controls=0&rel=0' + origin;
+      frame.addEventListener('load', () => {
+        // Ask the player to report state changes back to us
+        frame.contentWindow.postMessage(
+          JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        command('playVideo');
+      });
+      holder.appendChild(frame);
+      currentId = id;
+
+      clearTimeout(watchdog);
+      watchdog = setTimeout(() => {
+        if (!heardFromPlayer) {
+          setError('Couldn’t reach YouTube. Check your connection or ad blocker, and open this page from a web server rather than as a local file.');
+          setPlaying(false);
+        }
+      }, 10000);
+    }
+
+    // Player → page messages (ready, state changes, errors)
+    window.addEventListener('message', (e) => {
+      if (!/youtube(-nocookie)?\.com$/.test(new URL(e.origin).hostname)) return;
+      let data;
+      try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (err) { return; }
+      if (!data) return;
+      heardFromPlayer = true;
+
+      let state = null;
+      if (data.event === 'onStateChange') state = data.info;
+      else if (data.event === 'infoDelivery' && data.info && typeof data.info.playerState === 'number') state = data.info.playerState;
+
+      if (state === 1 || state === 3) { setPlaying(true); setError(''); }   // playing / buffering
+      else if (state === 2 || state === 0) setPlaying(false);              // paused / ended
+
+      if (data.event === 'onError') {
+        const code = data.info;
+        const reasons = {
+          2: 'The link has an invalid video ID.',
+          5: 'Your browser couldn’t play this video.',
+          100: 'The video was removed or is private.',
+          101: 'The video owner doesn’t allow it to play in other sites.',
+          150: 'The video owner doesn’t allow it to play in other sites.',
+          153: 'YouTube blocked the player because the page has no web address. Open this page from a web server (http://localhost) instead of a local file.'
+        };
+        setError((reasons[code] || 'This video can’t be played here.') + ' (error ' + code + ')');
+        setPlaying(false);
+      }
+    });
+
+    btn.addEventListener('click', () => {
+      if (playing) {
+        command('pauseVideo');
+        setPlaying(false);
+        return;
+      }
+      const id = parseId(input.value);
+      if (!id) {
+        if (currentId && frame) { command('playVideo'); setPlaying(true); return; }
+        setError('That doesn’t look like a YouTube link.');
+        return;
+      }
+      setError('');
+      if (id !== currentId || !frame) loadVideo(id);
+      else command('playVideo');
+      setPlaying(true);
+    });
+
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
+  </script>
+</body>
+</html>
