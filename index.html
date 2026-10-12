@@ -2,206 +2,466 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Background Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050816">
+<title>Say a song</title>
 <style>
   :root {
-    --bg: #f2f2ee;
-    --ink: #1b1b1b;
-    --line: #c9c9c2;
-    --accent: #1b1b1b;
-    --accent-ink: #f2f2ee;
-    --err: #b3261e;
+    --bg-deep: #050816;
+    --bg-glow: #0d2a6b;
+    --ink: #eaf2ff;
+    --muted: #8da3cc;
+    --blue-1: #5cc8ff;
+    --blue-2: #1580ff;
+    --blue-3: #0b3fd1;
+    --err: #ff9a94;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161616;
-      --ink: #ececec;
-      --line: #3a3a3a;
-      --accent: #ececec;
-      --accent-ink: #161616;
-      --err: #ff8a80;
-    }
-  }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; margin: 0; }
   body {
-    background: var(--bg);
+    min-height: 100dvh;
     color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(120% 70% at 50% 28%, var(--bg-glow) 0%, rgba(13,42,107,0) 62%),
+      var(--bg-deep);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
   }
-  main { width: 100%; max-width: 440px; }
-  input {
-    width: 100%;
-    font: inherit;
-    padding: 14px 16px;
-    color: var(--ink);
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    outline: none;
-  }
-  input:focus-visible { border-color: var(--ink); }
-  button {
-    margin-top: 14px;
-    width: 100%;
-    font: inherit;
-    font-weight: 600;
-    padding: 14px;
-    cursor: pointer;
-    color: var(--accent-ink);
-    background: var(--accent);
-    border: 0;
-    border-radius: 10px;
-  }
-  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-  #msg { min-height: 1.4em; margin: 12px 2px 0; font-size: 14px; color: var(--err); }
 
-  /* Player is rendered but kept completely out of sight. */
-  #hidden-player {
-    position: fixed;
-    left: -9999px;
-    top: 0;
-    width: 200px;
-    height: 200px;
+  /* ---------- Mic ---------- */
+  .mic-wrap {
+    position: relative;
+    width: min(60vw, 240px);
+    aspect-ratio: 1;
+    margin-bottom: 44px;
+  }
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(92, 200, 255, 0.55);
+    background: radial-gradient(circle, rgba(40,140,255,.12), rgba(40,140,255,0) 70%);
     opacity: 0;
     pointer-events: none;
-    overflow: hidden;
+  }
+  body[data-state="listening"] .ring { animation: pulse 2.4s ease-out infinite; }
+  body[data-state="listening"] .ring:nth-child(2) { animation-delay: .8s; }
+  body[data-state="listening"] .ring:nth-child(3) { animation-delay: 1.6s; }
+  @keyframes pulse {
+    0%   { transform: scale(1);   opacity: .75; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  .spinner {
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--blue-1);
+    border-right-color: rgba(92,200,255,.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  body[data-state="searching"] .spinner { opacity: 1; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #mic {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: radial-gradient(circle at 34% 26%, var(--blue-1) 0%, var(--blue-2) 52%, var(--blue-3) 100%);
+    box-shadow:
+      0 0 70px rgba(30, 130, 255, .55),
+      0 18px 40px rgba(0, 10, 60, .55),
+      inset 0 10px 22px rgba(255, 255, 255, .28),
+      inset 0 -14px 30px rgba(0, 20, 130, .5);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  #mic svg { width: 42%; height: 42%; fill: currentColor; filter: drop-shadow(0 4px 8px rgba(0,20,120,.45)); }
+  #mic:active { transform: scale(.95); }
+  #mic:focus-visible { outline: 3px solid #fff; outline-offset: 6px; }
+  body[data-state="listening"] #mic { transform: scale(.94); }
+  body[data-state="searching"] #mic { opacity: .85; }
+
+  /* ---------- Text ---------- */
+  .text { text-align: center; max-width: 440px; min-height: 76px; margin-bottom: 28px; }
+  #status { font-size: 19px; font-weight: 600; line-height: 1.3; margin: 0; }
+  #status.err { color: var(--err); font-weight: 500; }
+  #sub { margin: 8px 0 0; font-size: 15px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+
+  /* ---------- Play / pause ---------- */
+  #play {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(160, 200, 255, .4);
+    background: rgba(255, 255, 255, .07);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform .15s ease, background .2s, opacity .2s;
+  }
+  #play svg { width: 34px; height: 34px; fill: currentColor; }
+  #play:active { transform: scale(.93); }
+  #play:disabled { opacity: .3; cursor: default; }
+  #play:not(:disabled):hover { background: rgba(255, 255, 255, .13); }
+  #play:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  #play .i-pause { display: none; }
+  #play.on .i-pause { display: block; }
+  #play.on .i-play { display: none; }
+
+  /* ---------- Settings ---------- */
+  .settings { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; }
+  .link {
+    background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px;
+    cursor: pointer; padding: 8px; text-decoration: underline; text-underline-offset: 3px;
+  }
+  #panel {
+    display: none; margin: 0 auto 4px; max-width: 360px; width: calc(100% - 48px);
+    padding: 14px; text-align: left; border-radius: 14px;
+    background: rgba(5, 8, 22, .92); border: 1px solid rgba(160,200,255,.2);
+  }
+  #panel.open { display: block; }
+  #panel details { margin-top: 12px; }
+  #panel summary { font-size: 12.5px; color: var(--muted); cursor: pointer; }
+  #panel details p { margin-top: 8px; }
+  #panel p { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin: 0 0 8px; }
+  #panel .row { display: flex; gap: 8px; }
+  #panel input {
+    flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--ink);
+    background: rgba(255,255,255,.07); border: 1px solid rgba(160,200,255,.3);
+    border-radius: 8px; padding: 9px 11px; user-select: text; -webkit-user-select: text;
+  }
+  #panel button {
+    font: inherit; font-size: 14px; font-weight: 600; color: #fff; background: var(--blue-2);
+    border: 0; border-radius: 8px; padding: 0 14px; cursor: pointer;
+  }
+
+  /* ---------- Hidden player ---------- */
+  #hidden-player {
+    position: fixed; left: -9999px; top: 0; width: 200px; height: 200px;
+    opacity: 0; pointer-events: none; overflow: hidden;
   }
   #hidden-player iframe { width: 200px; height: 200px; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #mic, .ring, .spinner { animation: none !important; }
+    body[data-state="listening"] .ring { opacity: .35; }
+  }
 </style>
 </head>
-<body>
-  <main>
-    <input id="url" type="text" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" aria-label="YouTube link">
-    <button id="toggle" type="button">Play</button>
-    <p id="msg" role="status"></p>
-  </main>
+<body data-state="idle">
+
+  <div class="mic-wrap">
+    <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+    <span class="spinner"></span>
+    <button id="mic" type="button" aria-label="Tap and say a song name and artist">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+    </button>
+  </div>
+
+  <div class="text" aria-live="polite">
+    <p id="status">Tap to say a song</p>
+    <p id="sub"></p>
+  </div>
+
+  <button id="play" type="button" disabled aria-label="Play">
+    <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+  </button>
+
+  <div class="settings">
+    <div id="panel">
+      <div class="row">
+        <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button id="manualSearch" type="button">Search</button>
+      </div>
+      <details>
+        <summary>YouTube API key</summary>
+        <p>Optional but most reliable (free from Google Cloud Console). Without one, the page tries public search servers, which can be slow or offline.</p>
+        <div class="row">
+          <input id="apiKey" type="password" placeholder="YouTube Data API key" autocomplete="off" spellcheck="false">
+          <button id="saveKey" type="button">Save</button>
+        </div>
+      </details>
+    </div>
+    <button class="link" id="settingsToggle" type="button">Manual input</button>
+  </div>
 
   <div id="hidden-player" aria-hidden="true"></div>
 
-  <script>
-    const input = document.getElementById('url');
-    const btn = document.getElementById('toggle');
-    const msg = document.getElementById('msg');
-    const holder = document.getElementById('hidden-player');
+<script>
+  const $ = (id) => document.getElementById(id);
+  const micBtn = $('mic'), playBtn = $('play'), statusEl = $('status'), subEl = $('sub');
+  const holder = $('hidden-player');
 
-    let frame = null;
-    let currentId = null;
-    let playing = false;
-    let heardFromPlayer = false;
-    let watchdog = null;
+  // ---------- small helpers ----------
+  const store = {
+    get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  function setState(s) { document.body.dataset.state = s; }
+  function setStatus(t, isErr) { statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); }
+  function setSub(t) { subEl.textContent = t || ''; }
 
-    function parseId(raw) {
-      const s = raw.trim();
-      if (/^[\w-]{11}$/.test(s)) return s;
+  // ---------- hidden YouTube player (iframe + postMessage) ----------
+  let frame = null, playing = false, heard = false, watchdog = null, hintTimer = null;
+  let candidates = [], candIndex = 0;
+
+  function setPlaying(p) {
+    playing = p;
+    playBtn.classList.toggle('on', p);
+    playBtn.setAttribute('aria-label', p ? 'Pause' : 'Play');
+  }
+
+  function command(func, args) {
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*');
+    }
+  }
+
+  function loadVideo(id) {
+    holder.innerHTML = '';
+    heard = false;
+    frame = document.createElement('iframe');
+    frame.allow = 'autoplay; encrypted-media';
+    frame.title = 'Background audio';
+    frame.referrerPolicy = 'strict-origin-when-cross-origin';
+    const origin = /^https?:$/.test(location.protocol) ? '&origin=' + encodeURIComponent(location.origin) : '';
+    frame.src = 'https://www.youtube.com/embed/' + id +
+      '?enablejsapi=1&autoplay=1&playsinline=1&controls=0&rel=0' + origin;
+    frame.addEventListener('load', () => {
+      frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+      command('playVideo');
+    });
+    holder.appendChild(frame);
+    playBtn.disabled = false;
+
+    clearTimeout(watchdog); clearTimeout(hintTimer);
+    watchdog = setTimeout(() => {
+      if (!heard) { setStatus('Couldn’t reach YouTube. Check your connection or ad blocker.', true); setPlaying(false); }
+    }, 10000);
+    hintTimer = setTimeout(() => {
+      if (heard && !playing && document.body.dataset.state === 'idle' && !statusEl.classList.contains('err')) {
+        setStatus('Ready. Tap play to start.');
+      }
+    }, 4500);
+  }
+
+  function playCandidate() {
+    const c = candidates[candIndex];
+    loadVideo(c.id);
+    setPlaying(true);
+    setState('idle');
+    setStatus('Now playing');
+    setSub(c.title || '');
+  }
+
+  window.addEventListener('message', (e) => {
+    let host = '';
+    try { host = new URL(e.origin).hostname; } catch (err) { return; }
+    if (!/youtube(-nocookie)?\.com$/.test(host)) return;
+    let data;
+    try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (err) { return; }
+    if (!data) return;
+    heard = true;
+
+    let st = null;
+    if (data.event === 'onStateChange') st = data.info;
+    else if (data.event === 'infoDelivery' && data.info && typeof data.info.playerState === 'number') st = data.info.playerState;
+
+    if (st === 1 || st === 3) { setPlaying(true); if (statusEl.textContent.startsWith('Ready')) setStatus('Now playing'); }
+    else if (st === 2 || st === 0 || st === -1 || st === 5) setPlaying(false);
+
+    if (data.event === 'onError') {
+      const code = data.info;
+      setPlaying(false);
+      if (code === 153) {
+        setStatus('YouTube blocked the player. Open this page over https:// or http://localhost, not as a local file.', true);
+      } else if (candIndex + 1 < candidates.length) {
+        candIndex++;
+        setStatus('That one can’t be embedded. Trying the next result…');
+        playCandidate();
+      } else {
+        setStatus('None of the results could be played here. Try saying it again.', true);
+      }
+    }
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (!frame) return;
+    if (playing) { command('pauseVideo'); setPlaying(false); }
+    else { command('playVideo'); setPlaying(true); }
+  });
+
+  // ---------- search ----------
+  const PIPED = ['https://pipedapi.kavin.rocks', 'https://pipedapi.adminforge.de', 'https://api.piped.private.coffee'];
+  const INVIDIOUS = ['https://inv.nadeko.net', 'https://yewtu.be'];
+
+  async function getJSON(url, ms = 7000) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), ms);
+    try {
+      const r = await fetch(url, { signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } finally { clearTimeout(t); }
+  }
+
+  async function searchYouTube(q) {
+    const enc = encodeURIComponent(q);
+    const key = store.get('yt_api_key');
+
+    if (key) {
+      const d = await getJSON('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=5&q=' +
+        enc + '&key=' + encodeURIComponent(key));
+      return (d.items || []).map(i => ({ id: i.id.videoId, title: decodeHtml(i.snippet.title) }));
+    }
+
+    for (const base of PIPED) {
       try {
-        const u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s);
-        const host = u.hostname.replace(/^www\.|^m\./, '');
-        if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
-        if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
-          if (u.searchParams.get('v')) return u.searchParams.get('v');
-          const m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/);
-          if (m) return m[1];
-        }
+        const d = await getJSON(base + '/search?q=' + enc + '&filter=videos');
+        const out = (d.items || [])
+          .filter(i => i.url && i.url.includes('v='))
+          .slice(0, 5)
+          .map(i => ({ id: new URLSearchParams(i.url.split('?')[1]).get('v'), title: i.title }));
+        if (out.length) return out;
       } catch (e) {}
-      return null;
     }
-
-    function setPlaying(p) {
-      playing = p;
-      btn.textContent = p ? 'Pause' : 'Play';
+    for (const base of INVIDIOUS) {
+      try {
+        const d = await getJSON(base + '/api/v1/search?type=video&q=' + enc);
+        const out = (Array.isArray(d) ? d : []).slice(0, 5).map(i => ({ id: i.videoId, title: i.title }));
+        if (out.length) return out;
+      } catch (e) {}
     }
-    function setError(t) { msg.textContent = t || ''; }
+    throw new Error('no-search');
+  }
 
-    function command(func, args) {
-      if (!frame || !frame.contentWindow) return;
-      frame.contentWindow.postMessage(
-        JSON.stringify({ event: 'command', func: func, args: args || [] }), '*');
+  function decodeHtml(s) { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
+
+  async function findAndPlay(q) {
+    setState('searching');
+    setStatus('Looking for it…');
+    setSub('“' + q + '”');
+    try {
+      candidates = (await searchYouTube(q)).filter(c => c.id);
+    } catch (err) {
+      setState('idle');
+      setStatus(store.get('yt_api_key')
+        ? 'Search failed. Check your API key in Search settings.'
+        : 'Couldn’t reach a search server. Add a YouTube API key in Search settings.', true);
+      return;
     }
-
-    function loadVideo(id) {
-      holder.innerHTML = '';
-      heardFromPlayer = false;
-      frame = document.createElement('iframe');
-      frame.allow = 'autoplay; encrypted-media';
-      frame.title = 'Background audio';
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      const origin = /^https?:$/.test(location.protocol)
-        ? '&origin=' + encodeURIComponent(location.origin) : '';
-      frame.src = 'https://www.youtube.com/embed/' + id +
-        '?enablejsapi=1&autoplay=1&playsinline=1&controls=0&rel=0' + origin;
-      frame.addEventListener('load', () => {
-        // Ask the player to report state changes back to us
-        frame.contentWindow.postMessage(
-          JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
-        command('playVideo');
-      });
-      holder.appendChild(frame);
-      currentId = id;
-
-      clearTimeout(watchdog);
-      watchdog = setTimeout(() => {
-        if (!heardFromPlayer) {
-          setError('Couldn’t reach YouTube. Check your connection or ad blocker, and open this page from a web server rather than as a local file.');
-          setPlaying(false);
-        }
-      }, 10000);
+    if (!candidates.length) {
+      setState('idle');
+      setStatus('No results. Tap the mic and try again.', true);
+      return;
     }
+    candIndex = 0;
+    playCandidate();
+  }
 
-    // Player → page messages (ready, state changes, errors)
-    window.addEventListener('message', (e) => {
-      if (!/youtube(-nocookie)?\.com$/.test(new URL(e.origin).hostname)) return;
-      let data;
-      try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (err) { return; }
-      if (!data) return;
-      heardFromPlayer = true;
+  // ---------- speech recognition ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false, transcript = '', recError = '';
 
-      let state = null;
-      if (data.event === 'onStateChange') state = data.info;
-      else if (data.event === 'infoDelivery' && data.info && typeof data.info.playerState === 'number') state = data.info.playerState;
+  function startListening() {
+    if (!SR) {
+      setStatus('Voice input isn’t supported in this browser. Try Chrome or Safari.', true);
+      return;
+    }
+    // Pause whatever is playing so the mic doesn't pick it up
+    if (frame) { command('pauseVideo'); setPlaying(false); }
 
-      if (state === 1 || state === 3) { setPlaying(true); setError(''); }   // playing / buffering
-      else if (state === 2 || state === 0) setPlaying(false);              // paused / ended
+    transcript = ''; recError = '';
+    setSub('');
+    rec = new SR();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
 
-      if (data.event === 'onError') {
-        const code = data.info;
-        const reasons = {
-          2: 'The link has an invalid video ID.',
-          5: 'Your browser couldn’t play this video.',
-          100: 'The video was removed or is private.',
-          101: 'The video owner doesn’t allow it to play in other sites.',
-          150: 'The video owner doesn’t allow it to play in other sites.',
-          153: 'YouTube blocked the player because the page has no web address. Open this page from a web server (http://localhost) instead of a local file.'
-        };
-        setError((reasons[code] || 'This video can’t be played here.') + ' (error ' + code + ')');
-        setPlaying(false);
+    rec.onresult = (e) => {
+      let t = '';
+      for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      transcript = t;
+      setSub('“' + t.trim() + '”');
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        recError = 'Microphone is blocked. Allow mic access for this page (it needs https).';
+      } else if (e.error === 'no-speech') {
+        recError = 'Didn’t hear anything. Tap the mic and try again.';
+      } else if (e.error === 'audio-capture') {
+        recError = 'No microphone found.';
+      } else if (e.error !== 'aborted') {
+        recError = 'Voice input failed (' + e.error + '). Try again.';
       }
-    });
+    };
+    rec.onend = () => {
+      listening = false;
+      if (recError) { setState('idle'); setStatus(recError, true); setSub(''); return; }
+      const q = transcript.trim();
+      if (!q) { setState('idle'); setStatus('Didn’t catch that. Tap the mic to try again.', true); return; }
+      findAndPlay(q);
+    };
 
-    btn.addEventListener('click', () => {
-      if (playing) {
-        command('pauseVideo');
-        setPlaying(false);
-        return;
-      }
-      const id = parseId(input.value);
-      if (!id) {
-        if (currentId && frame) { command('playVideo'); setPlaying(true); return; }
-        setError('That doesn’t look like a YouTube link.');
-        return;
-      }
-      setError('');
-      if (id !== currentId || !frame) loadVideo(id);
-      else command('playVideo');
-      setPlaying(true);
-    });
+    try {
+      rec.start();
+      listening = true;
+      setState('listening');
+      setStatus('Listening… say the song and artist');
+    } catch (err) {
+      setStatus('Couldn’t start the microphone. Try again.', true);
+    }
+  }
 
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
-  </script>
+  micBtn.addEventListener('click', () => {
+    if (document.body.dataset.state === 'searching') return;
+    if (listening && rec) rec.stop();   // tap again to finish early
+    else startListening();
+  });
+
+  // ---------- settings ----------
+  $('apiKey').value = store.get('yt_api_key');
+  $('settingsToggle').addEventListener('click', () => {
+    $('panel').classList.toggle('open');
+    if ($('panel').classList.contains('open')) $('manualQuery').focus();
+  });
+
+  function manualSearch() {
+    const q = $('manualQuery').value.trim();
+    if (!q || document.body.dataset.state === 'searching') return;
+    if (listening && rec) { rec.onend = null; rec.onerror = null; try { rec.abort(); } catch (e) {} listening = false; }
+    if (frame) { command('pauseVideo'); setPlaying(false); }
+    $('panel').classList.remove('open');
+    $('manualQuery').blur();
+    findAndPlay(q);
+  }
+  $('manualSearch').addEventListener('click', manualSearch);
+  $('manualQuery').addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
+  $('saveKey').addEventListener('click', () => {
+    store.set('yt_api_key', $('apiKey').value.trim());
+    $('panel').classList.remove('open');
+    setStatus($('apiKey').value.trim() ? 'API key saved' : 'API key cleared');
+  });
+</script>
 </body>
 </html>
