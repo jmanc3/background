@@ -95,6 +95,15 @@
   #mic:focus-visible { outline: 3px solid #fff; outline-offset: 6px; }
   body[data-state="listening"] #mic { transform: scale(.94); }
   body[data-state="searching"] #mic { opacity: .85; }
+  #voiceQueue {
+    position: absolute; right: -8px; bottom: -8px; width: 54px; height: 54px; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; color: var(--ink);
+    background: #0b3fd1; border: 2px solid rgba(180,225,255,.8);
+    box-shadow: 0 8px 20px rgba(0,10,60,.5);
+  }
+  #voiceQueue svg { width: 25px; height: 25px; fill: currentColor; }
+  #voiceQueue:active { transform: scale(.93); }
+  #voiceQueue:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
   /* ---------- Text ---------- */
   .text { text-align: center; max-width: 440px; min-height: 76px; margin-bottom: 28px; }
@@ -102,7 +111,8 @@
   #status.err { color: var(--err); font-weight: 500; }
   #sub { margin: 8px 0 0; font-size: 15px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
 
-  /* ---------- Play / pause ---------- */
+  /* ---------- Playback controls ---------- */
+  .transport { display: flex; align-items: center; justify-content: center; gap: 8px; }
   #play {
     width: 72px;
     height: 72px;
@@ -125,6 +135,34 @@
   #play .i-pause { display: none; }
   #play.on .i-pause { display: block; }
   #play.on .i-play { display: none; }
+  .skip {
+    width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(160, 200, 255, .3);
+    background: rgba(255,255,255,.05); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+  }
+  .skip svg { width: 26px; height: 26px; fill: currentColor; }
+  .skip:active { transform: scale(.93); }
+  .skip:disabled { opacity: .3; cursor: default; }
+  .skip:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  .seek {
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(160, 200, 255, .25);
+    background: rgba(255,255,255,.04); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+  }
+  .seek svg { width: 25px; height: 25px; fill: currentColor; }
+  .seek:active { transform: scale(.93); }
+  .seek:disabled { opacity: .3; cursor: default; }
+  .seek:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+  /* ---------- Queue ---------- */
+  #queueArea { width: min(100%, 520px); min-height: 102px; margin-top: 16px; }
+  #queueHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  #queueHeading span { font-size: 12px; color: var(--muted); }
+  #clearQueue { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px; }
+  #queueList { display: flex; gap: 10px; overflow-x: auto; list-style: none; padding: 4px 4px 10px; margin: 0; scrollbar-width: thin; }
+  #queueList li { position: relative; flex: 0 0 220px; display: flex; gap: 10px; align-items: center; min-width: 0; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.06); cursor: grab; }
+  #queueList li.dragging { opacity: .45; }
+  #queueList img { width: 76px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: rgba(255,255,255,.1); }
+  #queueList .queue-title { color: var(--ink); font-size: 12px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #queueList .remove-queue { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 1px solid rgba(220,240,255,.7); border-radius: 50%; padding: 0; background: #173f85; color: #fff; font: 17px/18px sans-serif; cursor: pointer; }
 
   /* ---------- Settings ---------- */
   .settings { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; }
@@ -174,6 +212,9 @@
     <button id="mic" type="button" aria-label="Tap and say a song name and artist">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
     </button>
+    <button id="voiceQueue" type="button" aria-label="Say a song to add to the queue" title="Queue a song by voice">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12v2H3zm0 5h12v2H3zm0 5h8v2H3zm15-1v-3h-2v3h-3v2h3v3h2v-3h3v-2z"/></svg>
+    </button>
   </div>
 
   <div class="text" aria-live="polite">
@@ -181,16 +222,35 @@
     <p id="sub"></p>
   </div>
 
-  <button id="play" type="button" disabled aria-label="Play">
-    <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-    <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
-  </button>
+  <div class="transport" aria-label="Playback controls">
+    <button id="previous" class="skip" type="button" disabled aria-label="Previous track or restart track">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button id="seekBack" class="seek" type="button" disabled aria-label="Back 10 seconds" title="Back 10 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7v10l-7-5zm8 0v10l-7-5z"/></svg>
+    </button>
+    <button id="play" type="button" disabled aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <button id="seekForward" class="seek" type="button" disabled aria-label="Forward 10 seconds" title="Forward 10 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7v10l7-5zm8 0v10l7-5z"/></svg>
+    </button>
+    <button id="next" class="skip" type="button" disabled aria-label="Next queued track">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
+    </button>
+  </div>
+  <section id="queueArea" aria-label="Up next">
+    <div id="queueHeading"><span id="queueEmpty"></span><button id="clearQueue" type="button" hidden>Clear queue</button></div>
+    <ol id="queueList"></ol>
+  </section>
 
   <div class="settings">
     <div id="panel">
       <div class="row">
         <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
         <button id="manualSearch" type="button">Search</button>
+        <button id="manualQueue" type="button">Queue</button>
       </div>
       <details>
         <summary>YouTube API key</summary>
@@ -208,7 +268,7 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const micBtn = $('mic'), playBtn = $('play'), statusEl = $('status'), subEl = $('sub');
+  const micBtn = $('mic'), voiceQueueBtn = $('voiceQueue'), playBtn = $('play'), previousBtn = $('previous'), nextBtn = $('next'), seekBackBtn = $('seekBack'), seekForwardBtn = $('seekForward'), statusEl = $('status'), subEl = $('sub');
   const holder = $('hidden-player');
 
   // ---------- small helpers ----------
@@ -222,7 +282,7 @@
 
   // ---------- hidden YouTube player (iframe + postMessage) ----------
   let frame = null, playing = false, heard = false, watchdog = null, hintTimer = null;
-  let candidates = [], candIndex = 0;
+  let candidates = [], candIndex = 0, queue = [], history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggedTrack = null;
 
   function setPlaying(p) {
     playing = p;
@@ -273,21 +333,116 @@
     setSub(c.title || '');
   }
 
+  function activateTrack(track, rememberCurrent = true) {
+    if (rememberCurrent && currentTrack) history.push(currentTrack);
+    currentTrack = track;
+    candidates = track.candidates;
+    candIndex = 0;
+    playCandidate();
+    previousBtn.disabled = false;
+    seekBackBtn.disabled = false;
+    seekForwardBtn.disabled = false;
+  }
+
+  function renderQueue() {
+    const list = $('queueList');
+    list.replaceChildren();
+    queue.forEach(track => {
+      const item = document.createElement('li');
+      item.draggable = true;
+      item.title = 'Drag to reorder';
+      const thumbnail = document.createElement('img');
+      thumbnail.src = track.thumbnail || 'https://i.ytimg.com/vi/' + track.candidates[0].id + '/mqdefault.jpg';
+      thumbnail.alt = '';
+      const title = document.createElement('span');
+      title.className = 'queue-title';
+      title.textContent = track.title || track.query;
+      const remove = document.createElement('button');
+      remove.className = 'remove-queue';
+      remove.type = 'button';
+      remove.setAttribute('aria-label', 'Remove ' + (track.title || track.query) + ' from queue');
+      remove.textContent = '×';
+      remove.addEventListener('click', () => {
+        queue.splice(queue.indexOf(track), 1);
+        renderQueue();
+      });
+      item.addEventListener('dragstart', (e) => {
+        draggedTrack = track;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', track.query);
+      });
+      item.addEventListener('dragend', () => {
+        draggedTrack = null;
+        item.classList.remove('dragging');
+      });
+      item.addEventListener('dragover', (e) => {
+        if (draggedTrack && draggedTrack !== track) e.preventDefault();
+      });
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (!draggedTrack || draggedTrack === track) return;
+        const from = queue.indexOf(draggedTrack);
+        const to = queue.indexOf(track);
+        queue.splice(from, 1);
+        queue.splice(from < to ? to - 1 : to, 0, draggedTrack);
+        renderQueue();
+      });
+      item.append(thumbnail, title, remove);
+      list.appendChild(item);
+    });
+    $('queueEmpty').textContent = queue.length ? 'Up next · ' + queue.length : '';
+    $('clearQueue').hidden = queue.length === 0;
+    nextBtn.disabled = queue.length === 0;
+  }
+
+  function playNextInQueue() {
+    if (!queue.length) return false;
+    const next = queue.shift();
+    renderQueue();
+    activateTrack(next);
+    setStatus('Now playing from queue');
+    return true;
+  }
+
+  function finishPreviousRequest(time) {
+    if (!previousRequest) return;
+    previousRequest = false;
+    if (time > 6 || !history.length) {
+      command('seekTo', [0, true]);
+      command('playVideo');
+      setStatus('Restarting track');
+      return;
+    }
+    const previous = history.pop();
+    activateTrack(previous, false);
+    setStatus('Playing previous track');
+  }
+
   window.addEventListener('message', (e) => {
     let host = '';
     try { host = new URL(e.origin).hostname; } catch (err) { return; }
     if (!/youtube(-nocookie)?\.com$/.test(host)) return;
     let data;
     try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (err) { return; }
-    if (!data) return;
+    if (!data || (frame && e.source !== frame.contentWindow)) return;
     heard = true;
+
+    if (previousRequest && data.info && typeof data.info.currentTime === 'number') finishPreviousRequest(data.info.currentTime);
+    if (seekSeconds !== null && data.info && typeof data.info.currentTime === 'number') {
+      command('seekTo', [Math.max(0, data.info.currentTime + seekSeconds), true]);
+      seekSeconds = null;
+    }
 
     let st = null;
     if (data.event === 'onStateChange') st = data.info;
     else if (data.event === 'infoDelivery' && data.info && typeof data.info.playerState === 'number') st = data.info.playerState;
 
     if (st === 1 || st === 3) { setPlaying(true); if (statusEl.textContent.startsWith('Ready')) setStatus('Now playing'); }
-    else if (st === 2 || st === 0 || st === -1 || st === 5) setPlaying(false);
+    else if (st === 0) {
+      setPlaying(false);
+      if (!playNextInQueue()) setStatus('Playback finished');
+    } else if (st === 2 || st === -1 || st === 5) setPlaying(false);
 
     if (data.event === 'onError') {
       const code = data.info;
@@ -374,23 +529,43 @@
       setStatus('No results. Tap the mic and try again.', true);
       return;
     }
-    candIndex = 0;
-    playCandidate();
+    activateTrack({ query: q, title: candidates[0].title || q, candidates: candidates });
+  }
+
+  async function findAndQueue(q) {
+    setState('searching');
+    setStatus('Adding to queue…');
+    setSub('“' + q + '”');
+    let results;
+    try {
+      results = (await searchYouTube(q)).filter(c => c.id);
+    } catch (err) {
+      setState('idle');
+      setStatus('Couldn’t add that song. Check your connection or API key.', true);
+      return;
+    }
+    if (!results.length) {
+      setState('idle');
+      setStatus('No results to add. Try another search.', true);
+      return;
+    }
+    queue.push({ query: q, title: results[0].title || q, thumbnail: 'https://i.ytimg.com/vi/' + results[0].id + '/mqdefault.jpg', candidates: results });
+    renderQueue();
+    setState('idle');
+    setStatus('Added to queue');
+    setSub(results[0].title || q);
   }
 
   // ---------- speech recognition ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, listening = false, transcript = '', recError = '';
+  let rec = null, listening = false, transcript = '', recError = '', queueRecognition = false;
 
-  function startListening() {
+  function startListening(addToQueue = false) {
     if (!SR) {
       setStatus('Voice input isn’t supported in this browser. Try Chrome or Safari.', true);
       return;
     }
-    // Pause whatever is playing so the mic doesn't pick it up
-    if (frame) { command('pauseVideo'); setPlaying(false); }
-
-    transcript = ''; recError = '';
+    transcript = ''; recError = ''; queueRecognition = addToQueue;
     setSub('');
     rec = new SR();
     rec.lang = navigator.language || 'en-US';
@@ -420,14 +595,14 @@
       if (recError) { setState('idle'); setStatus(recError, true); setSub(''); return; }
       const q = transcript.trim();
       if (!q) { setState('idle'); setStatus('Didn’t catch that. Tap the mic to try again.', true); return; }
-      findAndPlay(q);
+      queueRecognition ? findAndQueue(q) : findAndPlay(q);
     };
 
     try {
       rec.start();
       listening = true;
       setState('listening');
-      setStatus('Listening… say the song and artist');
+      setStatus(addToQueue ? 'Listening… say a song to queue' : 'Listening… say the song and artist');
     } catch (err) {
       setStatus('Couldn’t start the microphone. Try again.', true);
     }
@@ -437,6 +612,11 @@
     if (document.body.dataset.state === 'searching') return;
     if (listening && rec) rec.stop();   // tap again to finish early
     else startListening();
+  });
+  voiceQueueBtn.addEventListener('click', () => {
+    if (document.body.dataset.state === 'searching') return;
+    if (listening && rec) rec.stop();
+    else startListening(true);
   });
 
   // ---------- settings ----------
@@ -450,13 +630,45 @@
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
     if (listening && rec) { rec.onend = null; rec.onerror = null; try { rec.abort(); } catch (e) {} listening = false; }
-    if (frame) { command('pauseVideo'); setPlaying(false); }
     $('panel').classList.remove('open');
     $('manualQuery').blur();
     findAndPlay(q);
   }
+  function manualQueue() {
+    const q = $('manualQuery').value.trim();
+    if (!q || document.body.dataset.state === 'searching') return;
+    if (listening && rec) { rec.onend = null; rec.onerror = null; try { rec.abort(); } catch (e) {} listening = false; }
+    $('panel').classList.remove('open');
+    $('manualQuery').blur();
+    findAndQueue(q);
+  }
   $('manualSearch').addEventListener('click', manualSearch);
+  $('manualQueue').addEventListener('click', manualQueue);
   $('manualQuery').addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
+  $('clearQueue').addEventListener('click', () => {
+    queue = [];
+    renderQueue();
+    setStatus('Queue cleared');
+  });
+  nextBtn.addEventListener('click', () => {
+    if (!queue.length) return;
+    playNextInQueue();
+  });
+  previousBtn.addEventListener('click', () => {
+    if (!frame || !currentTrack || previousRequest) return;
+    previousRequest = true;
+    command('getCurrentTime');
+    setTimeout(() => finishPreviousRequest(0), 750);
+  });
+  function seekBy(seconds) {
+    if (!frame || seekSeconds !== null) return;
+    seekSeconds = seconds;
+    command('getCurrentTime');
+    setTimeout(() => { seekSeconds = null; }, 750);
+  }
+  seekBackBtn.addEventListener('click', () => seekBy(-10));
+  seekForwardBtn.addEventListener('click', () => seekBy(10));
+  renderQueue();
   $('saveKey').addEventListener('click', () => {
     store.set('yt_api_key', $('apiKey').value.trim());
     $('panel').classList.remove('open');
