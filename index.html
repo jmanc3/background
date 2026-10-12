@@ -151,6 +151,10 @@
   .seek:active { transform: scale(.93); }
   .seek:disabled { opacity: .3; cursor: default; }
   .seek:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  #seekBar {
+    width: min(100%, 430px); height: 5px; margin: 0 0 13px; accent-color: var(--blue-1); cursor: pointer;
+  }
+  #seekBar:disabled { opacity: .3; cursor: default; }
 
   /* ---------- Queue ---------- */
   #queueArea { width: min(100%, 520px); min-height: 102px; margin-top: 16px; }
@@ -171,18 +175,17 @@
     cursor: pointer; padding: 8px; text-decoration: underline; text-underline-offset: 3px;
   }
   #panel {
-    display: none; margin: 0 auto 4px; max-width: 360px; width: calc(100% - 48px);
+    display: block; margin: 0 auto 4px; max-width: 440px; width: calc(100% - 32px);
     padding: 14px; text-align: left; border-radius: 14px;
     background: rgba(5, 8, 22, .92); border: 1px solid rgba(160,200,255,.2);
   }
-  #panel.open { display: block; }
   #panel details { margin-top: 12px; }
   #panel summary { font-size: 12.5px; color: var(--muted); cursor: pointer; }
   #panel details p { margin-top: 8px; }
   #panel p { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin: 0 0 8px; }
   #panel .row { display: flex; gap: 8px; }
   #panel input {
-    flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--ink);
+    flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink);
     background: rgba(255,255,255,.07); border: 1px solid rgba(160,200,255,.3);
     border-radius: 8px; padding: 9px 11px; user-select: text; -webkit-user-select: text;
   }
@@ -222,6 +225,7 @@
     <p id="sub"></p>
   </div>
 
+  <input id="seekBar" type="range" min="0" max="100" step="0.1" value="0" disabled aria-label="Song position">
   <div class="transport" aria-label="Playback controls">
     <button id="previous" class="skip" type="button" disabled aria-label="Previous track or restart track">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
@@ -261,14 +265,13 @@
         </div>
       </details>
     </div>
-    <button class="link" id="settingsToggle" type="button">Manual input</button>
   </div>
 
   <div id="hidden-player" aria-hidden="true"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const micBtn = $('mic'), voiceQueueBtn = $('voiceQueue'), playBtn = $('play'), previousBtn = $('previous'), nextBtn = $('next'), seekBackBtn = $('seekBack'), seekForwardBtn = $('seekForward'), statusEl = $('status'), subEl = $('sub');
+  const micBtn = $('mic'), voiceQueueBtn = $('voiceQueue'), playBtn = $('play'), previousBtn = $('previous'), nextBtn = $('next'), seekBackBtn = $('seekBack'), seekForwardBtn = $('seekForward'), seekBar = $('seekBar'), statusEl = $('status'), subEl = $('sub');
   const holder = $('hidden-player');
 
   // ---------- small helpers ----------
@@ -282,7 +285,7 @@
 
   // ---------- hidden YouTube player (iframe + postMessage) ----------
   let frame = null, playing = false, heard = false, watchdog = null, hintTimer = null;
-  let candidates = [], candIndex = 0, queue = [], history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggedTrack = null;
+  let candidates = [], candIndex = 0, queue = [], history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggedTrack = null, draggingSeekBar = false;
 
   function setPlaying(p) {
     playing = p;
@@ -342,6 +345,8 @@
     previousBtn.disabled = false;
     seekBackBtn.disabled = false;
     seekForwardBtn.disabled = false;
+    seekBar.disabled = false;
+    seekBar.value = 0;
   }
 
   function renderQueue() {
@@ -432,6 +437,12 @@
     if (seekSeconds !== null && data.info && typeof data.info.currentTime === 'number') {
       command('seekTo', [Math.max(0, data.info.currentTime + seekSeconds), true]);
       seekSeconds = null;
+    }
+    if (data.info && typeof data.info.duration === 'number' && data.info.duration > 0) {
+      seekBar.max = data.info.duration;
+    }
+    if (!draggingSeekBar && data.info && typeof data.info.currentTime === 'number') {
+      seekBar.value = Math.min(Number(seekBar.max), data.info.currentTime);
     }
 
     let st = null;
@@ -631,11 +642,6 @@
 
   // ---------- settings ----------
   $('apiKey').value = store.get('yt_api_key');
-  $('settingsToggle').addEventListener('click', () => {
-    $('panel').classList.toggle('open');
-    if ($('panel').classList.contains('open')) $('manualQuery').focus();
-  });
-
   function manualSearch() {
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
@@ -678,6 +684,12 @@
   }
   seekBackBtn.addEventListener('click', () => seekBy(-10));
   seekForwardBtn.addEventListener('click', () => seekBy(10));
+  seekBar.addEventListener('pointerdown', () => { draggingSeekBar = true; });
+  seekBar.addEventListener('pointerup', () => { draggingSeekBar = false; });
+  seekBar.addEventListener('input', () => {
+    if (!frame) return;
+    command('seekTo', [Number(seekBar.value), true]);
+  });
   renderQueue();
   $('saveKey').addEventListener('click', () => {
     store.set('yt_api_key', $('apiKey').value.trim());
