@@ -480,7 +480,7 @@
   }
 
   async function searchYouTube(q) {
-    const enc = encodeURIComponent(q);
+    const enc = encodeURIComponent(q + ' Official Audio');
     const key = store.get('yt_api_key');
 
     if (key) {
@@ -558,7 +558,7 @@
 
   // ---------- speech recognition ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, listening = false, transcript = '', recError = '', queueRecognition = false;
+  let rec = null, listening = false, transcript = '', recError = '', queueRecognition = false, resumeAfterListening = false;
 
   function startListening(addToQueue = false) {
     if (!SR) {
@@ -566,6 +566,11 @@
       return;
     }
     transcript = ''; recError = ''; queueRecognition = addToQueue;
+    resumeAfterListening = !!(frame && playing);
+    if (resumeAfterListening) {
+      command('pauseVideo');
+      setPlaying(false);
+    }
     setSub('');
     rec = new SR();
     rec.lang = navigator.language || 'en-US';
@@ -592,6 +597,11 @@
     };
     rec.onend = () => {
       listening = false;
+      if (resumeAfterListening) {
+        command('playVideo');
+        setPlaying(true);
+        resumeAfterListening = false;
+      }
       if (recError) { setState('idle'); setStatus(recError, true); setSub(''); return; }
       const q = transcript.trim();
       if (!q) { setState('idle'); setStatus('Didn’t catch that. Tap the mic to try again.', true); return; }
