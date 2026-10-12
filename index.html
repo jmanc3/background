@@ -171,15 +171,18 @@
   const holder = $('hidden-player');
 
   // iPhone Safari can retain its automatic form-focus zoom after the keyboard
-  // closes. Cap the scale only while the search field is active, then restore
-  // the user's normal pinch-zoom range as soon as it loses focus.
+  // closes. Keep the scale capped for this page session; restoring it on blur
+  // lets Safari reapply the stale, zoomed visual viewport.
   const viewportMeta = $('viewport');
   const defaultViewport = viewportMeta.content;
   const isIPhone = /iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  function setSearchViewportLocked(locked) {
-    if (isIPhone) viewportMeta.content = locked ? defaultViewport + ', maximum-scale=1' : defaultViewport;
+  function preventIOSInputZoom() {
+    if (isIPhone && viewportMeta.content === defaultViewport) {
+      viewportMeta.content = defaultViewport + ', maximum-scale=1';
+    }
   }
+  preventIOSInputZoom();
 
   // ---------- small helpers ----------
   const store = {
@@ -440,17 +443,10 @@
   $('manualSearch').addEventListener('click', manualSearch);
   $('manualQueue').addEventListener('click', manualQueue);
   const manualQuery = $('manualQuery');
-  manualQuery.addEventListener('touchstart', () => setSearchViewportLocked(true), { passive: true });
-  manualQuery.addEventListener('focus', () => setSearchViewportLocked(true));
-  manualQuery.addEventListener('blur', () => {
-    // Let Safari finish dismissing the keyboard before returning pinch zoom.
-    setTimeout(() => setSearchViewportLocked(false), 0);
-  });
   manualQuery.addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
   $('dictate').addEventListener('click', () => {
     const field = manualQuery;
     field.value = '';
-    setSearchViewportLocked(true);
     field.focus();
     setStatus('Use your keyboard’s dictation to enter a song');
     setSub('');
