@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta id="viewport" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050816">
 <title>Say a song</title>
 <style>
@@ -169,6 +169,17 @@
   const $ = (id) => document.getElementById(id);
   const playBtn = $('play'), previousBtn = $('previous'), nextBtn = $('next'), seekBackBtn = $('seekBack'), seekForwardBtn = $('seekForward'), seekBar = $('seekBar'), statusEl = $('status'), subEl = $('sub');
   const holder = $('hidden-player');
+
+  // iPhone Safari can retain its automatic form-focus zoom after the keyboard
+  // closes. Cap the scale only while the search field is active, then restore
+  // the user's normal pinch-zoom range as soon as it loses focus.
+  const viewportMeta = $('viewport');
+  const defaultViewport = viewportMeta.content;
+  const isIPhone = /iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function setSearchViewportLocked(locked) {
+    if (isIPhone) viewportMeta.content = locked ? defaultViewport + ', maximum-scale=1' : defaultViewport;
+  }
 
   // ---------- small helpers ----------
   const store = {
@@ -428,10 +439,18 @@
   }
   $('manualSearch').addEventListener('click', manualSearch);
   $('manualQueue').addEventListener('click', manualQueue);
-  $('manualQuery').addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
+  const manualQuery = $('manualQuery');
+  manualQuery.addEventListener('touchstart', () => setSearchViewportLocked(true), { passive: true });
+  manualQuery.addEventListener('focus', () => setSearchViewportLocked(true));
+  manualQuery.addEventListener('blur', () => {
+    // Let Safari finish dismissing the keyboard before returning pinch zoom.
+    setTimeout(() => setSearchViewportLocked(false), 0);
+  });
+  manualQuery.addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
   $('dictate').addEventListener('click', () => {
-    const field = $('manualQuery');
+    const field = manualQuery;
     field.value = '';
+    setSearchViewportLocked(true);
     field.focus();
     setStatus('Use your keyboard’s dictation to enter a song');
     setSub('');
