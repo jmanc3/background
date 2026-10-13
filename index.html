@@ -17,8 +17,11 @@
     --err: #ff9a94;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; margin: 0; }
+  html, body { margin: 0; min-height: 100%; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  button { touch-action: manipulation; } /* no double-tap zoom / tap delay */
   body {
+    min-height: 100vh;
     min-height: 100dvh;
     color: var(--ink);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -29,8 +32,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
-    overflow: hidden;
+    justify-content: safe center; /* tall content starts at the top instead of being clipped */
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    overflow-x: hidden;
+    overflow-y: auto;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -120,6 +125,51 @@
   #seekBar:disabled { opacity: .3; cursor: default; }
   .playback-controls[hidden] { display: none; }
 
+  /* ---------- Artist list ---------- */
+  .artist-list { display: flex; flex-direction: column; gap: 8px; }
+  .artist-row { appearance: none; display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px 8px 8px; border: 0; border-radius: 12px; background: rgba(255,255,255,.06); color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+  .artist-row:active { transform: scale(.99); }
+  .artist-row:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .artist-thumb { flex: 0 0 56px; width: 56px; height: 56px; }
+  .artist-thumb img, .artist-thumb .album-cover-placeholder { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: block; background: rgba(255,255,255,.09); }
+  .artist-text { flex: 1; min-width: 0; }
+  .artist-text strong { display: block; font-size: 16px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .artist-text span { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .artist-chevron { color: var(--muted); font-size: 24px; line-height: 1; }
+
+  /* ---------- Recent searches ---------- */
+  .recent { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .recent::-webkit-scrollbar { display: none; }
+  .recent[hidden] { display: none; }
+  .bubble { flex: 0 0 auto; max-width: 190px; min-height: 38px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(160,200,255,.32); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bubble:active { transform: scale(.96); }
+
+  /* ---------- Queue ---------- */
+  .queue-panel { width: min(100%, 440px); margin-top: 22px; }
+  .queue-panel[hidden] { display: none; }
+  .queue-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .queue-head h2 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .queue-head h2 span { font-variant-numeric: tabular-nums; }
+  #clearQueue { font: inherit; font-size: 13px; font-weight: 650; color: var(--ink); background: rgba(255,255,255,.07); border: 1px solid rgba(160,200,255,.3); border-radius: 999px; padding: 6px 14px; min-height: 38px; cursor: pointer; }
+  #clearQueue.armed { background: #b3261e; border-color: transparent; color: #fff; }
+  #clearQueue:focus-visible, .q-handle:focus-visible, .q-remove:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  #queueList { list-style: none; margin: 0; padding: 0; max-height: min(30dvh, 250px); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 6px; }
+  .q-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border-radius: 10px; background: rgba(255,255,255,.06); }
+  .q-row.dragging { z-index: 2; background: rgba(40,90,190,.85); box-shadow: 0 8px 22px rgba(0,0,0,.45); pointer-events: none; }
+  .q-row.drop-before::before, .q-row.drop-after::after { content: ""; position: absolute; left: 6px; right: 6px; height: 3px; border-radius: 2px; background: var(--blue-1); }
+  .q-row.drop-before::before { top: -5px; }
+  .q-row.drop-after::after { bottom: -5px; }
+  .q-thumb { flex: 0 0 44px; width: 44px; height: 44px; }
+  .q-thumb img, .q-thumb .album-cover-placeholder { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; display: block; background: rgba(255,255,255,.09); }
+  .q-text { flex: 1; min-width: 0; }
+  .q-text strong { display: block; font-size: 14px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .q-text span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .q-handle, .q-remove { flex: 0 0 auto; width: 36px; height: 44px; border: 0; border-radius: 8px; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+  .q-handle { cursor: grab; touch-action: none; }
+  .q-handle svg { width: 20px; height: 20px; fill: currentColor; }
+  .q-remove { font-size: 22px; line-height: 1; }
+  .q-handle:hover, .q-remove:hover { color: var(--ink); }
+
   /* ---------- Hidden player ---------- */
   #hidden-player {
     position: fixed; left: -9999px; top: 0; width: 200px; height: 200px;
@@ -128,18 +178,22 @@
   #hidden-player iframe { width: 200px; height: 200px; border: 0; }
 
   /* ---------- Album browser ---------- */
-  #browser { display: none; width: min(100%, 720px); height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 0 max(18px, env(safe-area-inset-bottom)); }
-  body[data-state="browsing"] { display: block; overflow: hidden; padding: 0 18px; }
+  #browser { display: none; width: min(100%, 720px); height: 100vh; height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 0 max(18px, env(safe-area-inset-bottom)); }
+  body[data-state="browsing"] { display: block; overflow: hidden; padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)); }
   body[data-state="browsing"] .home-ui { display: none; }
   body[data-state="browsing"] #browser { display: flex; flex-direction: column; }
   .browser-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   #browserBack { width: 44px; height: 44px; border: 1px solid rgba(160,200,255,.35); border-radius: 50%; background: rgba(255,255,255,.07); color: var(--ink); font-size: 28px; line-height: 1; cursor: pointer; }
-  #browserBack:focus-visible, .album-card:focus-visible, .track-row:focus-visible, #queueAlbum:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  #browserBack:focus-visible, .album-open:focus-visible, .mini-btn:focus-visible, .album-actions button:focus-visible, .bubble:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .browser-head > div { min-width: 0; }
   #browserTitle { margin: 0; font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #browserSub { margin: 3px 0 0; color: var(--muted); font-size: 14px; }
-  #browserList { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 24px; }
-  .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 14px; }
-  .album-card { appearance: none; padding: 0; color: var(--ink); text-align: left; border: 0; background: none; cursor: pointer; min-width: 0; }
+  #browserSub { margin: 3px 0 0; color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #browserList { flex: 1; min-height: 0; overflow-x: hidden; overscroll-behavior: contain; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 24px; }
+  .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 14px; }
+  .album-card { min-width: 0; }
+  .album-open { appearance: none; display: block; width: 100%; padding: 0; color: var(--ink); text-align: left; font: inherit; border: 0; background: none; cursor: pointer; min-width: 0; }
+  .card-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .card-actions .mini-btn { flex: 1; padding: 0 8px; }
   .album-card img, .album-cover-placeholder { width: 100%; aspect-ratio: 1; display: block; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,.09); }
   .album-card strong { display: block; font-size: 14px; line-height: 1.25; margin-top: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .album-card span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -147,12 +201,39 @@
   .album-detail img, .album-detail .album-cover-placeholder { width: 92px; height: 92px; flex: 0 0 92px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,.09); }
   .album-detail h3 { margin: 0; font-size: 18px; line-height: 1.25; }
   .album-detail p { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
-  #queueAlbum { width: 100%; min-height: 45px; border: 0; border-radius: 10px; color: #fff; background: var(--blue-2); font: inherit; font-weight: 650; cursor: pointer; margin-bottom: 12px; }
-  .track-row { width: 100%; display: flex; gap: 12px; align-items: center; border: 0; border-bottom: 1px solid rgba(160,200,255,.16); padding: 14px 6px; color: var(--ink); background: transparent; cursor: pointer; text-align: left; font: inherit; }
+  .album-actions { display: flex; gap: 10px; margin-bottom: 12px; }
+  .album-actions button { flex: 1; min-height: 45px; border: 0; border-radius: 10px; color: #fff; background: var(--blue-2); font: inherit; font-weight: 650; cursor: pointer; }
+  .album-actions button:last-child { background: var(--blue-3); }
+  .mini-btn { flex: 0 0 auto; min-height: 40px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; color: #fff; background: var(--blue-2); border: 1px solid transparent; }
+  .mini-btn.queue { background: transparent; color: var(--ink); border-color: rgba(160,200,255,.45); }
+  .mini-btn:disabled { opacity: .6; cursor: default; }
+  .track-row { width: 100%; box-sizing: border-box; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid rgba(160,200,255,.16); padding: 9px 6px; color: var(--ink); text-align: left; font: inherit; }
+  .track-btns { display: flex; gap: 6px; flex: 0 0 auto; }
   .track-number { width: 26px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
   .track-name { flex: 1; min-width: 0; }
-  .track-action { color: var(--blue-1); font-size: 13px; }
   .browser-message { color: var(--muted); text-align: center; padding: 42px 14px; }
+
+  /* ---------- Small phones ---------- */
+  @media (max-width: 380px) {
+    body { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+    .transport { gap: 6px; }
+    #play { width: 64px; height: 64px; }
+    .skip { width: 44px; height: 44px; }
+    .seek { min-width: 42px; height: 40px; padding: 0 8px; font-size: 13px; }
+    .track-number { width: 22px; }
+    .track-row { gap: 8px; }
+    .track-btns { gap: 4px; }
+    .track-row .mini-btn { padding: 0 11px; }
+    .album-grid { gap: 10px; }
+    .album-detail { gap: 12px; }
+    .album-detail img, .album-detail .album-cover-placeholder { width: 76px; height: 76px; flex-basis: 76px; }
+  }
+  @media (max-height: 520px) { /* landscape phones */
+    .search-area { margin-bottom: 14px; }
+    .text { margin-bottom: 14px; min-height: 0; }
+    .queue-panel { margin-top: 14px; }
+    #queueList { max-height: 40dvh; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; }
@@ -162,6 +243,7 @@
 <body data-state="idle">
 
   <section class="search-area home-ui" aria-label="Find music">
+    <div id="recentSearches" class="recent" hidden aria-label="Recent artist and album searches"></div>
     <div class="search-row">
       <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
       <button id="dictate" type="button" aria-label="Clear search and focus the text field" title="Clear search and use keyboard dictation">
@@ -196,6 +278,14 @@
       </button>
     </div>
   </div>
+
+  <section id="queuePanel" class="queue-panel home-ui" aria-label="Up next" hidden>
+    <header class="queue-head">
+      <h2>Up next · <span id="queueCount">0</span></h2>
+      <button id="clearQueue" type="button">Clear all</button>
+    </header>
+    <ol id="queueList"></ol>
+  </section>
 
   <section id="browser" aria-live="polite" aria-label="Music browser">
     <header class="browser-head">
@@ -233,8 +323,27 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   function setState(s) { document.body.dataset.state = s; }
-  function setStatus(t, isErr) { statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); textArea.hidden = !t && !subEl.textContent; }
+  function setStatus(t, isErr) { clearTimeout(revertTimer); statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); textArea.hidden = !t && !subEl.textContent; }
   function setSub(t) { subEl.textContent = t || ''; textArea.hidden = !statusEl.textContent && !subEl.textContent; }
+  // Temporary messages ("Added to queue", errors, ...) fall back to whatever the
+  // player is really doing once their time is up. Any later setStatus() cancels
+  // the pending revert, so it never overwrites a newer message.
+  let revertTimer = null;
+  function baselineMessage() {
+    if (currentTrack && playbackFinished) return { status: 'Playback finished', sub: '' };
+    if (currentTrack && !frame) { const c = candidates[candIndex]; return { status: 'Tap play to resume', sub: (c && c.title) || currentTrack.title || '' }; }
+    if (currentTrack && !playbackFailed) { const c = candidates[candIndex]; return { status: 'Now playing', sub: (c && c.title) || currentTrack.title || '' }; }
+    if (!currentTrack && !frame && queue.length) return { status: 'Tap play to start the queue', sub: queue[0].title || '' };
+    return { status: '', sub: '' };
+  }
+  function restoreBaseline() { const b = baselineMessage(); setStatus(b.status); setSub(b.sub); }
+  function flash(status, sub, isErr) {
+    statusEl.textContent = status; statusEl.classList.toggle('err', !!isErr);
+    if (sub !== undefined) subEl.textContent = sub || '';
+    textArea.hidden = !statusEl.textContent && !subEl.textContent;
+    clearTimeout(revertTimer);
+    revertTimer = setTimeout(restoreBaseline, isErr ? 6000 : 3500);
+  }
   function setSeekValue(value) {
     const max = Number(seekBar.max) || 1;
     const position = Math.max(0, Math.min(max, Number(value) || 0));
@@ -250,7 +359,7 @@
       return Array.isArray(items) ? items.filter(t => t && typeof t.query === 'string' && typeof t.title === 'string').map(t => ({ ...t, candidates: null })) : [];
     } catch (err) { return []; }
   }
-  let candidates = [], candIndex = 0, queue = savedQueue(), history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggingSeekBar = false;
+  let candidates = [], candIndex = 0, queue = savedQueue(), history = [], currentTrack = null, playbackFinished = false, playbackFailed = false, previousRequest = false, seekSeconds = null, draggingSeekBar = false;
 
   function setPlaying(p) {
     playing = p;
@@ -264,7 +373,7 @@
     }
   }
 
-  function loadVideo(id) {
+  function loadVideo(id, start) {
     holder.innerHTML = '';
     heard = false;
     frame = document.createElement('iframe');
@@ -273,7 +382,7 @@
     frame.referrerPolicy = 'strict-origin-when-cross-origin';
     const origin = /^https?:$/.test(location.protocol) ? '&origin=' + encodeURIComponent(location.origin) : '';
     frame.src = 'https://www.youtube.com/embed/' + id +
-      '?enablejsapi=1&autoplay=1&playsinline=1&controls=0&rel=0' + origin;
+      '?enablejsapi=1&autoplay=1&playsinline=1&controls=0&rel=0' + (start >= 1 ? '&start=' + Math.floor(start) : '') + origin;
     frame.addEventListener('load', () => {
       frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
       command('playVideo');
@@ -283,7 +392,7 @@
 
     clearTimeout(watchdog); clearTimeout(hintTimer);
     watchdog = setTimeout(() => {
-      if (!heard) { setStatus('Couldn’t reach YouTube. Check your connection or ad blocker.', true); setPlaying(false); }
+      if (!heard) { playbackFailed = true; flash('Couldn’t reach YouTube. Check your connection or ad blocker.', undefined, true); setPlaying(false); }
     }, 10000);
     hintTimer = setTimeout(() => {
       if (heard && !playing && document.body.dataset.state === 'idle' && !statusEl.classList.contains('err')) {
@@ -292,9 +401,39 @@
     }, 4500);
   }
 
-  function playCandidate() {
+  // The current track (with its resolved YouTube candidates and position) is
+  // saved so a reload can offer to resume it. Browsers block autoplay without a
+  // tap, so it resumes when the user presses play.
+  let resumeAt = 0, pendingResume = false, lastSavedPos = 0;
+  function saveCurrent(position) {
+    if (!currentTrack) { store.set('music_current', ''); return; }
+    const { query, title, album, artist, thumbnail, trackNumber } = currentTrack;
+    store.set('music_current', JSON.stringify({ track: { query, title, album, artist, thumbnail, trackNumber }, candidates, candIndex, position: Math.floor(position || 0) }));
+    lastSavedPos = position || 0;
+  }
+  function enableTransport() {
+    playbackControls.hidden = false;
+    previousBtn.disabled = false; seekBackBtn.disabled = false; seekForwardBtn.disabled = false; seekBar.disabled = false;
+  }
+  function restoreCurrent() {
+    try {
+      const d = JSON.parse(store.get('music_current') || 'null');
+      if (!d || !d.track || !Array.isArray(d.candidates)) return;
+      const list = d.candidates.filter(c => c && c.id);
+      if (!list.length) return;
+      candidates = list; candIndex = Math.max(0, Math.min(Number(d.candIndex) || 0, list.length - 1));
+      currentTrack = { ...d.track, candidates: list };
+      resumeAt = Math.max(0, Number(d.position) || 0); pendingResume = true;
+      playbackControls.hidden = false; playBtn.disabled = false;
+      restoreBaseline();
+    } catch (err) {}
+  }
+
+  function playCandidate(start) {
     const c = candidates[candIndex];
-    loadVideo(c.id);
+    loadVideo(c.id, start);
+    saveCurrent(start || 0);
+    playbackFailed = false;
     setPlaying(true);
     setState('idle');
     setStatus('Now playing');
@@ -311,21 +450,17 @@
       catch (err) { track.candidates = []; }
       if (!track.candidates.length) {
         setState('idle');
-        setStatus('Couldn’t find ' + track.title + '. Skipping it.', true);
+        flash('Couldn’t find ' + track.title + '. Skipping it.', undefined, true);
         setTimeout(() => playNextInQueue(), 700);
         return false;
       }
     }
     if (rememberCurrent && currentTrack) history.push(currentTrack);
-    currentTrack = track;
+    currentTrack = track; playbackFinished = false; pendingResume = false;
     candidates = track.candidates;
     candIndex = 0;
     playCandidate();
-    playbackControls.hidden = false;
-    previousBtn.disabled = false;
-    seekBackBtn.disabled = false;
-    seekForwardBtn.disabled = false;
-    seekBar.disabled = false;
+    enableTransport();
     setSeekValue(0);
     return true;
   }
@@ -334,15 +469,124 @@
     nextBtn.disabled = queue.length === 0;
     // Keep metadata, not video IDs/results. It is resolved fresh only when a
     // queued entry is due, which also makes a restored queue work after reload.
-    store.set('music_queue', JSON.stringify(queue.map(({ query, title, album, trackNumber }) => ({ query, title, album, trackNumber }))));
+    store.set('music_queue', JSON.stringify(queue.map(({ query, title, album, artist, thumbnail, trackNumber }) => ({ query, title, album, artist, thumbnail, trackNumber }))));
+    renderQueueList();
+    if (!frame && !currentTrack) { // nothing loaded (e.g. after a reload): let the queue be started
+      const has = queue.length > 0;
+      playbackControls.hidden = !has; playBtn.disabled = !has;
+      if (has && !statusEl.textContent) restoreBaseline();
+    }
   }
+
+  // ---------- queue panel (list, drag/keyboard reorder, remove, clear) ----------
+  const queuePanel = $('queuePanel'), queueList = $('queueList'), queueCount = $('queueCount'), clearQueueBtn = $('clearQueue');
+  let uidCounter = 0, queueDrag = null, clearArmed = false, clearTimer = null;
+  const GRIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5a1.6 1.6 0 1 1-3.2 0A1.6 1.6 0 0 1 9 5zm0 7a1.6 1.6 0 1 1-3.2 0A1.6 1.6 0 0 1 9 12zm0 7a1.6 1.6 0 1 1-3.2 0A1.6 1.6 0 0 1 9 19zm9.2-14a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0zm0 7a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0zm0 7a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0z"/></svg>';
+  function qid(item) { return item.uid || (item.uid = ++uidCounter); }
+  function disarmClear() { clearArmed = false; clearTimeout(clearTimer); clearQueueBtn.classList.remove('armed'); clearQueueBtn.textContent = 'Clear all'; }
+
+  function buildQueueRow(item) {
+    const li = document.createElement('li'); li.className = 'q-row'; li.dataset.uid = qid(item);
+    const thumb = document.createElement('div'); thumb.className = 'q-thumb'; thumb.append(imageOrPlaceholder(item.thumbnail));
+    const text = document.createElement('div'); text.className = 'q-text';
+    const name = document.createElement('strong'); name.textContent = item.title || item.query;
+    const meta = document.createElement('span'); meta.textContent = [item.album, item.artist].filter(Boolean).join(' · ');
+    text.append(name); if (meta.textContent) text.append(meta);
+    const handle = document.createElement('button'); handle.type = 'button'; handle.className = 'q-handle'; handle.innerHTML = GRIP;
+    handle.setAttribute('aria-label', 'Reorder ' + (item.title || 'track') + '. Drag, or press up and down arrow keys.');
+    handle.addEventListener('pointerdown', e => startQueueDrag(e, li, item));
+    handle.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); moveQueueItem(item, e.key === 'ArrowUp' ? -1 : 1); }
+    });
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'q-remove'; remove.textContent = '×';
+    remove.setAttribute('aria-label', 'Remove ' + (item.title || 'track') + ' from queue');
+    remove.addEventListener('click', () => { const i = queue.indexOf(item); if (i >= 0) { queue.splice(i, 1); renderQueue(); } });
+    li.append(thumb, text, handle, remove);
+    return li;
+  }
+  function renderQueueList() {
+    if (queueDrag) return; // re-rendered when the drag ends
+    queuePanel.hidden = queue.length === 0;
+    queueCount.textContent = queue.length;
+    if (!queue.length) disarmClear();
+    queueList.replaceChildren(...queue.map(buildQueueRow));
+  }
+  function moveQueueItem(item, delta) {
+    const i = queue.indexOf(item), j = i + delta;
+    if (i < 0 || j < 0 || j >= queue.length) return;
+    queue.splice(i, 1); queue.splice(j, 0, item);
+    renderQueue();
+    const h = queueList.querySelector('[data-uid="' + qid(item) + '"] .q-handle'); if (h) h.focus();
+  }
+  function startQueueDrag(e, row, item) {
+    if (queueDrag || (e.button != null && e.button !== 0)) return;
+    e.preventDefault();
+    queueDrag = { item, row, pointerId: e.pointerId, startY: e.clientY, lastY: e.clientY, startScroll: queueList.scrollTop, target: null, after: false, raf: 0 };
+    row.classList.add('dragging');
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+    window.addEventListener('pointermove', onQueueDragMove);
+    window.addEventListener('pointerup', onQueueDragEnd);
+    window.addEventListener('pointercancel', onQueueDragCancel);
+    queueDrag.raf = requestAnimationFrame(queueDragTick);
+  }
+  function onQueueDragMove(e) { if (queueDrag && e.pointerId === queueDrag.pointerId) queueDrag.lastY = e.clientY; }
+  function onQueueDragEnd(e) { endQueueDrag(e, false); }
+  function onQueueDragCancel(e) { endQueueDrag(e, true); }
+  function queueDragTick() {
+    const d = queueDrag; if (!d) return;
+    const r = queueList.getBoundingClientRect();
+    if (d.lastY < r.top + 28) queueList.scrollTop -= 8; else if (d.lastY > r.bottom - 28) queueList.scrollTop += 8;
+    d.row.style.transform = 'translateY(' + (d.lastY - d.startY + queueList.scrollTop - d.startScroll) + 'px)';
+    const others = [...queueList.children].filter(el => el !== d.row);
+    others.forEach(el => el.classList.remove('drop-before', 'drop-after'));
+    d.target = null;
+    if (others.length) {
+      let target = others[others.length - 1], after = true;
+      for (const el of others) { const b = el.getBoundingClientRect(); if (d.lastY < b.top + b.height / 2) { target = el; after = false; break; } }
+      d.target = target; d.after = after; target.classList.add(after ? 'drop-after' : 'drop-before');
+    }
+    d.raf = requestAnimationFrame(queueDragTick);
+  }
+  function endQueueDrag(e, cancelled) {
+    const d = queueDrag; if (!d || (e && e.pointerId !== d.pointerId)) return;
+    cancelAnimationFrame(d.raf);
+    window.removeEventListener('pointermove', onQueueDragMove);
+    window.removeEventListener('pointerup', onQueueDragEnd);
+    window.removeEventListener('pointercancel', onQueueDragCancel);
+    queueDrag = null;
+    const from = queue.indexOf(d.item);
+    if (!cancelled && d.target && from >= 0) {
+      const targetItem = queue.find(q => qid(q) === Number(d.target.dataset.uid));
+      if (targetItem) { queue.splice(from, 1); queue.splice(queue.indexOf(targetItem) + (d.after ? 1 : 0), 0, d.item); }
+    }
+    renderQueue();
+  }
+  clearQueueBtn.addEventListener('click', () => {
+    if (queueDrag) return;
+    if (!clearArmed) {
+      clearArmed = true; clearQueueBtn.classList.add('armed'); clearQueueBtn.textContent = 'Tap again to clear';
+      clearTimeout(clearTimer); clearTimer = setTimeout(disarmClear, 3000);
+      return;
+    }
+    disarmClear(); queue.length = 0; renderQueue();
+  });
 
   async function playNextInQueue() {
     if (!queue.length) return false;
     const next = queue.shift();
     renderQueue();
-    await activateTrack(next);
-    setStatus('Now playing from queue');
+    const ok = await activateTrack(next);
+    if (ok) flash('Now playing from queue');
+    return ok;
+  }
+
+  // If nothing is playing (never started, or the last track ended with an empty
+  // queue), start the queue. A paused track counts as "playing" and is left alone.
+  function startQueueIfIdle() {
+    if (document.body.dataset.state === 'searching') return false;
+    if (currentTrack && !playbackFinished) return false;
+    if (!queue.length) return false;
+    void playNextInQueue();
     return true;
   }
 
@@ -352,12 +596,12 @@
     if (time > 6 || !history.length) {
       command('seekTo', [0, true]);
       command('playVideo');
-      setStatus('Restarting track');
+      flash('Restarting track');
       return;
     }
     const previous = history.pop();
     activateTrack(previous, false);
-    setStatus('Playing previous track');
+    flash('Playing previous track');
   }
 
   window.addEventListener('message', (e) => {
@@ -379,6 +623,7 @@
     }
     if (!draggingSeekBar && data.info && typeof data.info.currentTime === 'number') {
       setSeekValue(data.info.currentTime);
+      if (Math.abs(data.info.currentTime - lastSavedPos) >= 5) saveCurrent(data.info.currentTime);
     }
 
     let st = null;
@@ -389,26 +634,30 @@
     else if (st === 0) {
       setPlaying(false);
       if (queue.length) void playNextInQueue();
-      else setStatus('Playback finished');
+      else { playbackFinished = true; store.set('music_current', ''); setStatus('Playback finished'); }
     } else if (st === 2 || st === -1 || st === 5) setPlaying(false);
 
     if (data.event === 'onError') {
       const code = data.info;
       setPlaying(false);
       if (code === 153) {
-        setStatus('YouTube blocked the player. Open this page over https:// or http://localhost, not as a local file.', true);
+        playbackFailed = true; flash('YouTube blocked the player. Open this page over https:// or http://localhost, not as a local file.', undefined, true);
       } else if (candIndex + 1 < candidates.length) {
         candIndex++;
         setStatus('That one can’t be embedded. Trying the next result…');
         playCandidate();
       } else {
-        setStatus('None of the results could be played here. Try saying it again.', true);
+        playbackFailed = true; flash('None of the results could be played here. Try saying it again.', undefined, true);
       }
     }
   });
 
   playBtn.addEventListener('click', () => {
-    if (!frame) return;
+    if (!frame) {
+      if (pendingResume && currentTrack) { pendingResume = false; enableTransport(); playCandidate(resumeAt); }
+      else if (queue.length) void playNextInQueue();
+      return;
+    }
     if (playing) { command('pauseVideo'); setPlaying(false); }
     else { command('playVideo'); setPlaying(true); }
   });
@@ -461,10 +710,12 @@
 
   // ---------- Discogs album browsing ----------
   const browser = $('browser'), browserTitle = $('browserTitle'), browserSub = $('browserSub'), browserList = $('browserList');
-  let browseAction = 'play';
+  let browseSeq = 0, backTarget = null; // browseSeq cancels stale async renders
 
   function home() {
+    browseSeq++; backTarget = null;
     setState('idle');
+    window.scrollTo(0, 0);
     browserList.replaceChildren();
   }
   function browseMessage(title, sub, message) {
@@ -474,10 +725,31 @@
   }
   function discogs(url) { return getJSON('https://api.discogs.com' + url, 10000); }
   function musicBrainz(path) { return getJSON('https://musicbrainz.org/ws/2/' + path + (path.includes('?') ? '&' : '?') + 'fmt=json', 10000); }
-  function mbCover(id) { return 'https://coverartarchive.org/release-group/' + id + '/front-250'; }
-  function imageOrPlaceholder(url) {
-    if (!url) { const el = document.createElement('div'); el.className = 'album-cover-placeholder'; return el; }
-    const el = document.createElement('img'); el.src = url; el.alt = ''; el.loading = 'lazy'; return el;
+  function mbCover(id, size) { return 'https://coverartarchive.org/release-group/' + id + '/front-' + (size || 250); }
+  // Show the smallest thumbnail right away, then fetch the larger image in the
+  // background (once the card is near the viewport) and swap it in when loaded.
+  function imageOrPlaceholder(small, large) {
+    small = small || large; large = large || '';
+    if (!small) { const el = document.createElement('div'); el.className = 'album-cover-placeholder'; return el; }
+    const el = document.createElement('img'); el.alt = ''; el.loading = 'lazy'; el.decoding = 'async'; el.src = small;
+    if (!large || large === small) return el;
+    let started = false;
+    const upgrade = () => {
+      if (started) return; started = true;
+      const hi = new Image(); hi.decoding = 'async';
+      hi.onload = () => { el.src = large; };
+      hi.src = large;
+    };
+    const arm = () => {
+      if (!('IntersectionObserver' in window)) return upgrade();
+      const io = new IntersectionObserver(entries => {
+        if (entries.some(e => e.isIntersecting)) { io.disconnect(); upgrade(); }
+      }, { rootMargin: '200px' });
+      io.observe(el);
+    };
+    el.addEventListener('load', arm, { once: true });
+    el.addEventListener('error', upgrade, { once: true }); // small one failed: try the big one
+    return el;
   }
   function uniqAlbums(releases) {
     const seen = new Set();
@@ -488,49 +760,313 @@
     });
   }
   function albumFromRelease(r, artistName) {
-    return { id: r.master_id || r.id, type: r.master_id ? 'masters' : 'releases', title: r.title || 'Untitled album', artist: artistName || r.artist || '', cover: r.cover_image || r.thumb || '' };
+    return { id: r.master_id || r.id, type: r.master_id ? 'masters' : 'releases', title: r.title || 'Untitled album', artist: artistName || r.artist || '', thumb: r.thumb || '', cover: r.cover_image || '' };
   }
-  function renderAlbums(albums, heading, detail) {
+  // Build a queue entry whose search query carries artist + song + album, so the
+  // YouTube lookup is more likely to hit the right recording. Parts already
+  // contained in another part (e.g. self-titled albums) are not repeated.
+  function cleanName(s) { return String(s || '').replace(/\s*\(\d+\)\s*$/, '').replace(/\s+/g, ' ').trim(); } // Discogs "Artist (2)"
+  function trackItem(artist, albumTitle, trackTitle, position, thumbnail) {
+    artist = cleanName(artist); albumTitle = cleanName(albumTitle); trackTitle = cleanName(trackTitle);
+    if (/^various(?: artists)?$/i.test(artist)) artist = '';
+    const parts = [];
+    [artist, trackTitle, albumTitle].forEach(part => {
+      if (!part) return;
+      const low = part.toLowerCase();
+      if (parts.some(p => p.toLowerCase().includes(low))) return;
+      for (let i = parts.length - 1; i >= 0; i--) if (low.includes(parts[i].toLowerCase())) parts.splice(i, 1);
+      parts.push(part);
+    });
+    // keep a stable order: artist, song, album
+    const order = [artist, trackTitle, albumTitle].map(x => x.toLowerCase());
+    parts.sort((a, b) => order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase()));
+    return { query: parts.join(' '), title: trackTitle, album: albumTitle, artist, thumbnail: thumbnail || '', trackNumber: position, candidates: null };
+  }
+  function discogsArtist(data, album) {
+    const names = (data.artists || []).map(a => cleanName(a.name)).filter(Boolean);
+    return names.length ? names.join(', ') : cleanName(data.artists_sort || album.artist || '');
+  }
+  // ---------- cached searches + recent-search bubbles ----------
+  const CACHE_MAX_AGE = 14 * 24 * 3600 * 1000, SEARCH_MAX = 15, ALBUM_MAX = 40;
+  function loadList(key, valid) {
+    try {
+      const list = JSON.parse(store.get(key) || '[]'), now = Date.now();
+      return Array.isArray(list) ? list.filter(e => e && valid(e) && now - (e.ts || 0) < CACHE_MAX_AGE) : [];
+    } catch (err) { return []; }
+  }
+  // Older saved artist searches (which had auto-picked one artist) are dropped.
+  let searchHistory = loadList('music_searches', e => e.key && (Array.isArray(e.albums) || Array.isArray(e.artists)) && !(e.key.startsWith('artist:') && !(Array.isArray(e.artists) && e.v >= 2)));
+  let albumCache = loadList('music_albums', e => e.key && Array.isArray(e.tracks));
+  let artistCache = loadList('music_artist_albums', e => e.key && Array.isArray(e.albums));
+  const recentEl = $('recentSearches');
+  function normKey(q) { return q.toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function rememberSearch(entry) {
+    searchHistory = [entry, ...searchHistory.filter(e => e.key !== entry.key)].slice(0, SEARCH_MAX);
+    store.set('music_searches', JSON.stringify(searchHistory));
+    renderBubbles();
+  }
+  function rememberAlbum(detail) {
+    albumCache = [...albumCache.filter(d => d.key !== detail.key), detail].slice(-ALBUM_MAX);
+    store.set('music_albums', JSON.stringify(albumCache));
+  }
+  function rememberArtistAlbums(entry) {
+    artistCache = [...artistCache.filter(a => a.key !== entry.key), entry].slice(-30);
+    store.set('music_artist_albums', JSON.stringify(artistCache));
+  }
+  function renderBubbles() {
+    recentEl.hidden = searchHistory.length === 0;
+    recentEl.replaceChildren(...searchHistory.map(entry => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bubble';
+      b.textContent = entry.label; b.title = entry.label;
+      b.addEventListener('click', () => showSearchResults(entry));
+      return b;
+    }));
+  }
+  // Let a mouse wheel scroll the strip sideways.
+  recentEl.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && recentEl.scrollWidth > recentEl.clientWidth) { recentEl.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
+
+  // ---------- actions (every album / track has Play and Queue) ----------
+  function albumItems(detail) {
+    return detail.tracks.map((t, i) => trackItem(t.artist || detail.artist, detail.title, t.title, t.position || (i + 1), detail.thumb || detail.cover));
+  }
+  // Play album: first track starts now, the rest go in front of whatever is already queued.
+  function playAlbum(detail) {
+    const items = albumItems(detail); if (!items.length) return;
+    queue.unshift(...items.slice(1)); renderQueue(); home(); void activateTrack(items[0]);
+  }
+  function queueAlbum(detail) {
+    const items = albumItems(detail); if (!items.length) return;
+    queue.push(...items); renderQueue(); home();
+    flash('Album queued', detail.title + ' · ' + items.length + ' tracks'); startQueueIfIdle();
+  }
+  function playTrack(item) { home(); void activateTrack(item); }
+  function queueTrack(item) { queue.push(item); renderQueue(); home(); flash('Added to queue', item.title); startQueueIfIdle(); }
+  function miniButton(label, kind, onClick) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mini-btn ' + kind; b.textContent = label;
+    b.addEventListener('click', onClick); return b;
+  }
+
+  // ---------- album list ----------
+  function showSearchResults(entry) {
+    browseSeq++; backTarget = null;
+    if (entry.artists) {
+      const only = soleArtist(entry.artists, entry.query);
+      return only ? openArtist(only, entry, true) : renderArtists(entry);
+    }
+    renderAlbums(entry.albums, entry.heading, entry.detail, () => showSearchResults(entry));
+  }
+  // `self` re-opens this exact grid; it is what Back from an album returns to.
+  function renderAlbums(albums, heading, detail, self) {
     setState('browsing'); browserTitle.textContent = heading; browserSub.textContent = detail || '';
+    $('browserBack').setAttribute('aria-label', backTarget ? 'Back to results' : 'Back to home');
     browserList.replaceChildren();
     if (!albums.length) { browseMessage(heading, detail, 'No albums found. Try a more specific artist or album.'); return; }
     const grid = document.createElement('div'); grid.className = 'album-grid';
     albums.forEach(album => {
-      const card = document.createElement('button'); card.type = 'button'; card.className = 'album-card';
-      card.append(imageOrPlaceholder(album.cover));
-      const title = document.createElement('strong'); title.textContent = album.title; card.append(title);
-      const by = document.createElement('span'); by.textContent = album.artist; card.append(by);
-      card.addEventListener('click', () => showAlbum(album)); grid.append(card);
+      const card = document.createElement('div'); card.className = 'album-card';
+      const open = document.createElement('button'); open.type = 'button'; open.className = 'album-open';
+      open.setAttribute('aria-label', 'Open ' + album.title + (album.artist ? ' by ' + album.artist : ''));
+      open.append(imageOrPlaceholder(album.thumb, album.cover));
+      const title = document.createElement('strong'); title.textContent = album.title; open.append(title);
+      const by = document.createElement('span'); by.textContent = album.artist; open.append(by);
+      open.addEventListener('click', () => openAlbum(album, self));
+      // Play / Queue straight from the grid: fetch (or reuse cached) tracks first.
+      const run = (fn) => async (e) => {
+        const btn = e.currentTarget, label = btn.textContent;
+        btn.disabled = true; btn.textContent = '…';
+        try {
+          const d = await loadAlbumDetail(album);
+          if (!d.tracks.length) throw new Error('no-tracks');
+          btn.disabled = false; btn.textContent = label; fn(d);
+        } catch (err) {
+          btn.textContent = 'Failed';
+          setTimeout(() => { btn.disabled = false; btn.textContent = label; }, 2000);
+        }
+      };
+      const acts = document.createElement('div'); acts.className = 'card-actions';
+      const playB = miniButton('Play', 'play', run(playAlbum)); playB.setAttribute('aria-label', 'Play album ' + album.title);
+      const queueB = miniButton('Queue', 'queue', run(queueAlbum)); queueB.setAttribute('aria-label', 'Queue album ' + album.title);
+      acts.append(playB, queueB);
+      card.append(open, acts); grid.append(card);
     });
     browserList.append(grid);
   }
-  async function showArtistAlbums(name) {
-    browseMessage('Albums', name, 'Finding albums…');
-    try {
-      const matches = await discogs('/database/search?type=artist&per_page=5&q=' + encodeURIComponent(name));
-      const artist = (matches.results || [])[0];
-      if (!artist || !artist.id) throw new Error('not-found');
-      const releases = await discogs('/artists/' + artist.id + '/releases?per_page=100&sort=year&sort_order=asc');
-      // Discogs' artist feed also contains singles and duplicate regional
-      // pressings. Masters with an Album format are the closest match to an
-      // artist's actual album catalogue.
-      const albums = uniqAlbums((releases.releases || []).filter(r => r.type === 'master' && /album/i.test(r.format || '')))
-        .map(r => albumFromRelease(r, artist.title));
-      if (!albums.length) return showMusicBrainzArtist(name);
-      renderAlbums(albums, 'Albums', artist.title);
-    } catch (err) { await showMusicBrainzArtist(name); }
+
+  // ---------- album detail (tracklist) ----------
+  async function fetchDiscogsAlbum(album) {
+    const data = await discogs('/' + album.type + '/' + album.id);
+    const tracks = (data.tracklist || []).filter(t => t.type_ !== 'heading' && t.title)
+      .map((t, i) => ({ title: t.title, position: String(t.position || (i + 1)), artist: (t.artists || []).map(a => cleanName(a.name)).filter(Boolean).join(', ') }));
+    return { title: data.title || album.title, artist: discogsArtist(data, album), thumb: album.thumb || data.thumb || '', cover: data.cover_image || album.cover || '', tracks };
   }
-  async function showMusicBrainzArtist(name) {
-    browseMessage('Albums', name, 'Looking for albums…');
+  async function fetchMusicBrainzAlbum(album) {
+    const releases = await musicBrainz('release?limit=100&release-group=' + encodeURIComponent(album.id));
+    const release = (releases.releases || []).sort((a, b) => (b['track-count'] || 0) - (a['track-count'] || 0))[0];
+    if (!release || !release.id) throw new Error('not-found');
+    const data = await musicBrainz('release/' + release.id + '?inc=recordings');
+    const tracks = (data.media || []).flatMap(m => m.tracks || [])
+      .map((t, i) => ({ title: t.title || (t.recording && t.recording.title), position: String(t.position || (i + 1)), artist: '' })).filter(t => t.title);
+    if (!tracks.length) throw new Error('no-tracks');
+    return { title: data.title || album.title, artist: (data['artist-credit'] || []).map(a => a.name).join(', ') || album.artist, thumb: album.thumb || '', cover: album.cover || '', tracks };
+  }
+  async function loadAlbumDetail(album) {
+    const key = album.type + ':' + album.id;
+    const hit = albumCache.find(d => d.key === key);
+    if (hit) return hit;
+    const detail = album.type === 'mb-group' ? await fetchMusicBrainzAlbum(album) : await fetchDiscogsAlbum(album);
+    detail.key = key; detail.ts = Date.now();
+    if (detail.tracks.length) rememberAlbum(detail);
+    return detail;
+  }
+  async function openAlbum(album, back) {
+    const seq = ++browseSeq;
+    backTarget = back || null; // Back returns to the (cached) grid it was opened from
+    browseMessage('Album', album.title, 'Loading tracks…');
     try {
-      const artists = await musicBrainz('artist/?limit=5&query=' + encodeURIComponent(name));
-      const artist = (artists.artists || [])[0];
-      if (!artist || !artist.id) throw new Error('not-found');
-      const groups = await musicBrainz('release-group?limit=100&type=album&artist=' + encodeURIComponent(artist.id));
-      const albums = (groups['release-groups'] || []).filter(g => String(g['primary-type'] || '').toLowerCase() === 'album')
-        .map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: artist.name, cover: mbCover(g.id) }));
-      renderAlbums(albums, 'Albums', artist.name);
-    } catch (err) { browseMessage('Albums', name, 'Could not find that artist. Check the spelling and try again.'); }
+      const detail = await loadAlbumDetail(album);
+      if (seq === browseSeq) renderAlbumDetail(detail);
+    } catch (err) { if (seq === browseSeq) browseMessage('Album', album.title, 'Could not load this track list.'); }
+  }
+  function renderAlbumDetail(detail) {
+    setState('browsing'); browserTitle.textContent = detail.title; browserSub.textContent = detail.artist || '';
+    $('browserBack').setAttribute('aria-label', backTarget ? 'Back to results' : 'Back to home');
+    browserList.replaceChildren();
+    const head = document.createElement('div'); head.className = 'album-detail'; head.append(imageOrPlaceholder(detail.thumb, detail.cover));
+    const copy = document.createElement('div'); const h = document.createElement('h3'); h.textContent = detail.title;
+    const p = document.createElement('p'); p.textContent = detail.tracks.length + ' track' + (detail.tracks.length === 1 ? '' : 's');
+    copy.append(h, p); head.append(copy); browserList.append(head);
+    if (!detail.tracks.length) { const empty = document.createElement('p'); empty.className = 'browser-message'; empty.textContent = 'This listing has no track list.'; browserList.append(empty); return; }
+    const actions = document.createElement('div'); actions.className = 'album-actions';
+    const playB = document.createElement('button'); playB.type = 'button'; playB.textContent = 'Play album'; playB.addEventListener('click', () => playAlbum(detail));
+    const queueB = document.createElement('button'); queueB.type = 'button'; queueB.textContent = 'Queue album'; queueB.addEventListener('click', () => queueAlbum(detail));
+    actions.append(playB, queueB); browserList.append(actions);
+    const items = albumItems(detail);
+    detail.tracks.forEach((track, i) => {
+      const row = document.createElement('div'); row.className = 'track-row';
+      const num = document.createElement('span'); num.className = 'track-number'; num.textContent = track.position || (i + 1);
+      const name = document.createElement('span'); name.className = 'track-name'; name.textContent = track.title;
+      const btns = document.createElement('div'); btns.className = 'track-btns';
+      const pb = miniButton('Play', 'play', () => playTrack(items[i])); pb.setAttribute('aria-label', 'Play ' + track.title);
+      const qb = miniButton('Queue', 'queue', () => queueTrack(items[i])); qb.setAttribute('aria-label', 'Queue ' + track.title);
+      btns.append(pb, qb); row.append(num, name, btns); browserList.append(row);
+    });
+  }
+
+  // ---------- searching (artist / album) ----------
+  // ---------- artists: list every match, let the user choose ----------
+  function normName(n) { return cleanName(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, ''); }
+  function editDistance(a, b) {
+    const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = row[0]; row[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const tmp = row[j];
+        row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = tmp;
+      }
+    }
+    return row[b.length];
+  }
+  // Only skip the chooser when there is a single result, or exactly one result
+  // whose name matches what was typed AND nothing else is a near-miss spelling.
+  // Same-name artists ("Nirvana" / "Nirvana (2)") and near matches ("The
+  // Weekend" / "The Weeknd") are ambiguous, so the user picks.
+  function soleArtist(list, typed) {
+    if (list.length === 1) return list[0];
+    const t = normName(typed || '');
+    const exact = list.filter(a => normName(a.name) === t);
+    if (exact.length !== 1) return null;
+    return list.some(a => a !== exact[0] && editDistance(normName(a.name), t) <= 2) ? null : exact[0];
+  }
+  function realImage(u) { return u && !/spacer\.gif/i.test(u) ? u : ''; }
+  async function searchArtists(name) {
+    // Discogs matches whole words only, so a misspelling ("the weekend") finds
+    // the wrong artists or none. MusicBrainz supports fuzzy terms, so ask both
+    // and merge: Discogs first (it has photos), then MusicBrainz artists that
+    // Discogs did not already return.
+    const words = name.split(/\s+/).map(w => w.replace(/[^\p{L}\p{N}]/gu, '')).filter(w => w && !/^the$/i.test(w));
+    const fuzzy = words.length ? 'artist:(' + words.map(w => w.length > 3 ? w + '~' : w).join(' AND ') + ')' : '';
+    const exactQ = 'artist:"' + name.replace(/["\\]/g, '') + '"';
+    const [dg, mb] = await Promise.allSettled([
+      discogs('/database/search?type=artist&per_page=10&q=' + encodeURIComponent(name)),
+      musicBrainz('artist/?limit=10&query=' + encodeURIComponent(fuzzy ? '(' + fuzzy + ') OR ' + exactQ : exactQ))
+    ]);
+    const fromDiscogs = dg.status === 'fulfilled' ? (dg.value.results || []).filter(r => r.id).map(r => {
+      const clean = cleanName(r.title);
+      return { source: 'discogs', id: r.id, name: clean, tag: r.title !== clean ? r.title : '', thumb: realImage(r.thumb), cover: realImage(r.cover_image) };
+    }) : [];
+    const seen = new Set(fromDiscogs.map(a => normName(a.name)));
+    const fromMB = mb.status === 'fulfilled' ? (mb.value.artists || []).filter(a => a.id && !seen.has(normName(a.name))).map(a => {
+      seen.add(normName(a.name)); // one entry per distinct MusicBrainz name
+      return { source: 'mb', id: a.id, name: a.name, tag: [a.disambiguation, a.type, a.country].filter(Boolean).join(' · '), thumb: '', cover: '' };
+    }) : [];
+    if (dg.status === 'rejected' && mb.status === 'rejected') throw new Error('search-failed');
+    const t = normName(name);
+    const list = [...fromDiscogs, ...fromMB]
+      .map((a, i) => ({ a, i, d: editDistance(normName(a.name), t) }))
+      .sort((x, y) => x.d - y.d || x.i - y.i) // closest spelling first, original order within ties
+      .map(x => x.a);
+    if (!list.length) throw new Error('not-found');
+    return list;
+  }
+  async function mbAlbumsById(id, name) {
+    const groups = await musicBrainz('release-group?limit=100&type=album&artist=' + encodeURIComponent(id));
+    return (groups['release-groups'] || []).filter(g => String(g['primary-type'] || '').toLowerCase() === 'album')
+      .map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: name, thumb: mbCover(g.id, 250), cover: mbCover(g.id, 500) }));
+  }
+  async function loadArtistAlbums(artist) {
+    const key = artist.source + ':' + artist.id;
+    const hit = artistCache.find(a => a.key === key);
+    if (hit) return hit.albums;
+    let albums = [];
+    if (artist.source === 'discogs') {
+      try {
+        const releases = await discogs('/artists/' + artist.id + '/releases?per_page=100&sort=year&sort_order=asc');
+        // Discogs' artist feed also contains singles and duplicate regional
+        // pressings. Masters with an Album format are the closest match to an
+        // artist's actual album catalogue.
+        albums = uniqAlbums((releases.releases || []).filter(r => r.type === 'master' && /album/i.test(r.format || '')))
+          .map(r => albumFromRelease(r, artist.name));
+      } catch (err) {}
+      if (!albums.length) { // fall back to MusicBrainz for this same artist name
+        const m = ((await musicBrainz('artist/?limit=1&query=' + encodeURIComponent(artist.name))).artists || [])[0];
+        if (m && m.id) albums = await mbAlbumsById(m.id, m.name);
+      }
+    } else albums = await mbAlbumsById(artist.id, artist.name);
+    if (albums.length) rememberArtistAlbums({ key, ts: Date.now(), albums });
+    return albums;
+  }
+  function renderArtists(entry) {
+    setState('browsing'); browserTitle.textContent = 'Which artist?'; browserSub.textContent = '“' + entry.query + '” · ' + entry.artists.length + ' match' + (entry.artists.length === 1 ? '' : 'es');
+    $('browserBack').setAttribute('aria-label', 'Back to home');
+    browserList.replaceChildren();
+    const list = document.createElement('div'); list.className = 'artist-list';
+    entry.artists.forEach(artist => {
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'artist-row';
+      const thumb = document.createElement('div'); thumb.className = 'artist-thumb'; thumb.append(imageOrPlaceholder(artist.thumb, artist.cover));
+      const text = document.createElement('div'); text.className = 'artist-text';
+      const name = document.createElement('strong'); name.textContent = artist.name; text.append(name);
+      if (artist.tag) { const tag = document.createElement('span'); tag.textContent = artist.tag; text.append(tag); }
+      const chev = document.createElement('span'); chev.className = 'artist-chevron'; chev.textContent = '›'; chev.setAttribute('aria-hidden', 'true');
+      row.append(thumb, text, chev);
+      row.addEventListener('click', () => openArtist(artist, entry, false));
+      list.append(row);
+    });
+    browserList.append(list);
+  }
+  async function openArtist(artist, entry, auto) {
+    const seq = ++browseSeq;
+    const back = auto ? null : () => showSearchResults(entry); // auto-picked: Back goes home, not into a loop
+    backTarget = back;
+    browseMessage('Albums', artist.name, 'Finding albums…');
+    try {
+      const albums = await loadArtistAlbums(artist);
+      if (seq !== browseSeq) return;
+      const view = () => { browseSeq++; backTarget = back; renderAlbums(albums, 'Albums', artist.name, view); };
+      view();
+    } catch (err) { if (seq === browseSeq) browseMessage('Albums', artist.name, 'Could not load albums for that artist.'); }
   }
   function splitAlbumQuery(query) {
     const artistFirst = query.match(/\bartist\s+(.+?)\s+\balbum\s+(.+)$/i);
@@ -541,97 +1077,51 @@
     if (marker) { artist = marker[1].trim(); text = text.slice(0, marker.index).trim(); }
     return { album: text, artist };
   }
-  async function showAlbumSearch(query) {
-    const wanted = splitAlbumQuery(query);
-    browseMessage('Album', wanted.album + (wanted.artist ? ' · ' + wanted.artist : ''), 'Finding the album…');
+  async function searchAlbum(wanted) {
     try {
       const search = await discogs('/database/search?type=release&per_page=30&q=' + encodeURIComponent(wanted.album + (wanted.artist ? ' ' + wanted.artist : '')));
-      let albums = (search.results || []).map(r => ({ id: r.id, type: 'releases', title: r.title || '', artist: '', cover: r.cover_image || r.thumb || '' }));
-      if (wanted.artist) albums = albums.filter(a => a.title.toLowerCase().includes(wanted.artist.toLowerCase()));
-      renderAlbums(albums, 'Choose an album', wanted.artist || wanted.album);
-    } catch (err) { await showMusicBrainzAlbumSearch(wanted); }
+      let albums = (search.results || []).map(r => ({ id: r.id, type: 'releases', title: r.title || '', artist: '', thumb: r.thumb || '', cover: r.cover_image || '' }));
+      if (wanted.artist) { // narrow by artist, but never filter everything away (typos, "Weeknd, The")
+        const want = normName(wanted.artist), narrowed = albums.filter(a => normName(a.title).includes(want));
+        if (narrowed.length) albums = narrowed;
+      }
+      return { heading: 'Choose an album', detail: wanted.artist || wanted.album, albums };
+    } catch (err) {}
+    // Without an explicit artist, keep the full phrase as a broad search so
+    // entries such as "album Rumours Fleetwood Mac" work without "by".
+    const terms = wanted.artist ? 'releasegroup:"' + wanted.album + '" AND artist:"' + wanted.artist + '"' : wanted.album;
+    const results = await musicBrainz('release-group?limit=30&query=' + encodeURIComponent(terms));
+    const albums = (results['release-groups'] || []).map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: (g['artist-credit'] || []).map(a => a.name).join(', '), thumb: mbCover(g.id, 250), cover: mbCover(g.id, 500) }));
+    return { heading: 'Choose an album', detail: wanted.artist || wanted.album, albums };
   }
-  async function showMusicBrainzAlbumSearch(wanted) {
-    browseMessage('Choose an album', wanted.artist || wanted.album, 'Looking for the album…');
-    try {
-      // Without an explicit artist, keep the full phrase as a broad search so
-      // entries such as "album Rumours Fleetwood Mac" work without "by".
-      const terms = wanted.artist ? 'releasegroup:"' + wanted.album + '" AND artist:"' + wanted.artist + '"' : wanted.album;
-      const results = await musicBrainz('release-group?limit=30&query=' + encodeURIComponent(terms));
-      const albums = (results['release-groups'] || []).map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: (g['artist-credit'] || []).map(a => a.name).join(', '), cover: mbCover(g.id) }));
-      renderAlbums(albums, 'Choose an album', wanted.artist || wanted.album);
-    } catch (err) { browseMessage('Album', wanted.album, 'Could not find that album.'); }
+  async function browseQuery(query) {
+    query = query.trim();
+    const isAlbum = /\balbum\b/i.test(query);
+    const key = (isAlbum ? 'album:' : 'artist:') + normKey(query);
+    const cached = searchHistory.find(e => e.key === key);
+    if (cached) { rememberSearch(cached); showSearchResults(cached); return; } // moves its bubble to the front
+    const seq = ++browseSeq; backTarget = null;
+    const wanted = isAlbum ? splitAlbumQuery(query) : null;
+    const artistName = isAlbum ? '' : (query.replace(/\bartist\b/ig, '').trim() || query);
+    const albumLabel = isAlbum ? wanted.album + (wanted.artist ? ' · ' + wanted.artist : '') : '';
+    if (isAlbum) browseMessage('Album', albumLabel, 'Finding the album…');
+    else browseMessage('Artists', artistName, 'Finding artists…');
+    let result;
+    try { result = isAlbum ? await searchAlbum(wanted) : await searchArtists(artistName); }
+    catch (err) {
+      if (seq === browseSeq) {
+        if (isAlbum) browseMessage('Album', wanted.album, 'Could not find that album.');
+        else browseMessage('Artists', artistName, 'Could not find that artist. Check the spelling and try again.');
+      }
+      return;
+    }
+    let entry;
+    if (isAlbum) entry = { key, label: albumLabel, heading: result.heading, detail: result.detail, albums: result.albums, ts: Date.now() };
+    else { const only = soleArtist(result, artistName); entry = { key, label: only ? only.name : artistName, query: artistName, artists: result, v: 2, ts: Date.now() }; }
+    if (isAlbum ? entry.albums.length : entry.artists.length) rememberSearch(entry); // empty results are never cached
+    if (seq === browseSeq) showSearchResults(entry);
   }
-  async function showAlbum(album) {
-    if (album.type === 'mb-group') return showMusicBrainzAlbum(album);
-    browseMessage('Album', album.title, 'Loading tracks…');
-    try {
-      const data = await discogs('/' + album.type + '/' + album.id);
-      const tracks = (data.tracklist || []).filter(t => t.type_ !== 'heading' && t.title);
-      setState('browsing'); browserTitle.textContent = data.title || album.title; browserSub.textContent = data.artists_sort || album.artist || '';
-      browserList.replaceChildren();
-      const detail = document.createElement('div'); detail.className = 'album-detail'; detail.append(imageOrPlaceholder(data.cover_image || data.thumb || album.cover));
-      const copy = document.createElement('div'); const h = document.createElement('h3'); h.textContent = data.title || album.title;
-      const p = document.createElement('p'); p.textContent = tracks.length + ' track' + (tracks.length === 1 ? '' : 's'); copy.append(h, p); detail.append(copy); browserList.append(detail);
-      if (!tracks.length) { const empty = document.createElement('p'); empty.className = 'browser-message'; empty.textContent = 'This Discogs listing has no track list.'; browserList.append(empty); return; }
-      const queueAlbum = document.createElement('button'); queueAlbum.type = 'button'; queueAlbum.id = 'queueAlbum'; queueAlbum.textContent = 'Queue album';
-      queueAlbum.addEventListener('click', () => {
-        tracks.forEach((track, i) => queue.push({ query: (data.artists_sort || album.artist || '') + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position || (i + 1), candidates: null }));
-        renderQueue(); home(); setStatus('Album queued'); setSub((data.title || album.title) + ' · ' + tracks.length + ' tracks');
-      });
-      browserList.append(queueAlbum);
-      tracks.forEach((track, i) => {
-        const row = document.createElement('button'); row.type = 'button'; row.className = 'track-row';
-        const num = document.createElement('span'); num.className = 'track-number'; num.textContent = track.position || (i + 1);
-        const title = document.createElement('span'); title.className = 'track-name'; title.textContent = track.title;
-        const action = document.createElement('span'); action.className = 'track-action'; action.textContent = browseAction === 'queue' ? 'Queue' : 'Play';
-        row.append(num, title, action);
-        row.addEventListener('click', async () => {
-          const item = { query: (data.artists_sort || album.artist || '') + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position || (i + 1), candidates: null };
-          home();
-          if (browseAction === 'queue') { queue.push(item); renderQueue(); setStatus('Added to queue'); setSub(track.title); }
-          else await activateTrack(item);
-        });
-        browserList.append(row);
-      });
-    } catch (err) { browseMessage('Album', album.title, 'Discogs could not load this track list.'); }
-  }
-  async function showMusicBrainzAlbum(album) {
-    browseMessage('Album', album.title, 'Loading tracks…');
-    try {
-      const releases = await musicBrainz('release?limit=100&release-group=' + encodeURIComponent(album.id));
-      const release = (releases.releases || []).sort((a, b) => (b['track-count'] || 0) - (a['track-count'] || 0))[0];
-      if (!release || !release.id) throw new Error('not-found');
-      const data = await musicBrainz('release/' + release.id + '?inc=recordings');
-      const tracks = (data.media || []).flatMap(m => m.tracks || []).map((t, i) => ({ title: t.title || (t.recording && t.recording.title), position: t.position || (i + 1) })).filter(t => t.title);
-      const artist = (data['artist-credit'] || []).map(a => a.name).join(', ') || album.artist;
-      setState('browsing'); browserTitle.textContent = data.title || album.title; browserSub.textContent = artist;
-      browserList.replaceChildren();
-      const detail = document.createElement('div'); detail.className = 'album-detail'; detail.append(imageOrPlaceholder(album.cover));
-      const copy = document.createElement('div'); const h = document.createElement('h3'); h.textContent = data.title || album.title;
-      const p = document.createElement('p'); p.textContent = tracks.length + ' track' + (tracks.length === 1 ? '' : 's'); copy.append(h, p); detail.append(copy); browserList.append(detail);
-      if (!tracks.length) throw new Error('no-tracks');
-      const add = (track) => ({ query: artist + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position, candidates: null });
-      const queueAlbum = document.createElement('button'); queueAlbum.type = 'button'; queueAlbum.id = 'queueAlbum'; queueAlbum.textContent = 'Queue album';
-      queueAlbum.addEventListener('click', () => { tracks.forEach(t => queue.push(add(t))); renderQueue(); home(); setStatus('Album queued'); setSub((data.title || album.title) + ' · ' + tracks.length + ' tracks'); });
-      browserList.append(queueAlbum);
-      tracks.forEach(track => {
-        const row = document.createElement('button'); row.type = 'button'; row.className = 'track-row';
-        const num = document.createElement('span'); num.className = 'track-number'; num.textContent = track.position;
-        const title = document.createElement('span'); title.className = 'track-name'; title.textContent = track.title;
-        const action = document.createElement('span'); action.className = 'track-action'; action.textContent = browseAction === 'queue' ? 'Queue' : 'Play'; row.append(num, title, action);
-        row.addEventListener('click', async () => { const item = add(track); home(); if (browseAction === 'queue') { queue.push(item); renderQueue(); setStatus('Added to queue'); setSub(track.title); } else await activateTrack(item); });
-        browserList.append(row);
-      });
-    } catch (err) { browseMessage('Album', album.title, 'Could not load this track list.'); }
-  }
-  function browseQuery(query, action) {
-    browseAction = action;
-    if (/\balbum\b/i.test(query)) return showAlbumSearch(query);
-    const artist = query.replace(/\bartist\b/ig, '').trim();
-    return showArtistAlbums(artist || query);
-  }
-  $('browserBack').addEventListener('click', home);
+  $('browserBack').addEventListener('click', () => { if (backTarget) backTarget(); else home(); });
 
   async function findAndPlay(q) {
     setState('searching');
@@ -641,12 +1131,12 @@
       candidates = (await searchYouTube(q)).filter(c => c.id);
     } catch (err) {
       setState('idle');
-      setStatus('Couldn’t reach a search server. Try again in a moment.', true);
+      flash('Couldn’t reach a search server. Try again in a moment.', undefined, true);
       return;
     }
     if (!candidates.length) {
       setState('idle');
-      setStatus('No results. Try another song or artist.', true);
+      flash('No results. Try another song or artist.', undefined, true);
       return;
     }
     await activateTrack({ query: q, title: candidates[0].title || q, candidates: candidates });
@@ -661,19 +1151,19 @@
       results = (await searchYouTube(q)).filter(c => c.id);
     } catch (err) {
       setState('idle');
-      setStatus('Couldn’t add that song. Check your connection or API key.', true);
+      flash('Couldn’t add that song. Check your connection or API key.', undefined, true);
       return;
     }
     if (!results.length) {
       setState('idle');
-      setStatus('No results to add. Try another search.', true);
+      flash('No results to add. Try another search.', undefined, true);
       return;
     }
     queue.push({ query: q, title: results[0].title || q, thumbnail: 'https://i.ytimg.com/vi/' + results[0].id + '/mqdefault.jpg', candidates: results });
     renderQueue();
     setState('idle');
-    setStatus('Added to queue');
-    setSub(results[0].title || q);
+    flash('Added to queue', results[0].title || q);
+    startQueueIfIdle();
   }
 
   // ---------- search controls ----------
@@ -681,14 +1171,14 @@
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
     $('manualQuery').blur();
-    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q, 'play'); return; }
+    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q); return; }
     findAndPlay(q);
   }
   function manualQueue() {
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
     $('manualQuery').blur();
-    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q, 'queue'); return; }
+    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q); return; }
     findAndQueue(q);
   }
   $('manualSearch').addEventListener('click', manualSearch);
@@ -699,8 +1189,7 @@
     const field = manualQuery;
     field.value = '';
     field.focus();
-    setStatus('Use your keyboard’s dictation to enter a song');
-    setSub('');
+    flash('Use your keyboard’s dictation to enter a song', '');
   });
   nextBtn.addEventListener('click', () => {
     if (!queue.length) return;
@@ -726,7 +1215,10 @@
     if (!frame) return;
     command('seekTo', [Number(seekBar.value), true]);
   });
+  window.addEventListener('pagehide', () => { if (frame && currentTrack && !playbackFinished) saveCurrent(Number(seekBar.value)); });
+  restoreCurrent();
   renderQueue();
+  renderBubbles();
 </script>
 </body>
 </html>
