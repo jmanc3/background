@@ -62,6 +62,7 @@
 
   /* ---------- Text ---------- */
   .text { text-align: center; max-width: 440px; min-height: 76px; margin-bottom: 28px; }
+  .text[hidden] { display: none; }
   #status { font-size: 19px; font-weight: 600; line-height: 1.3; margin: 0; }
   #status.err { color: var(--err); font-weight: 500; }
   #sub { margin: 8px 0 0; font-size: 15px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
@@ -99,17 +100,25 @@
   .skip:disabled { opacity: .3; cursor: default; }
   .skip:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
   .seek {
-    width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(160, 200, 255, .25);
-    background: rgba(255,255,255,.04); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+    min-width: 48px; height: 42px; padding: 0 10px; border-radius: 21px; border: 1px solid rgba(160, 200, 255, .3);
+    background: rgba(255,255,255,.06); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: .01em;
   }
-  .seek svg { width: 25px; height: 25px; fill: currentColor; }
   .seek:active { transform: scale(.93); }
   .seek:disabled { opacity: .3; cursor: default; }
   .seek:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
   #seekBar {
-    width: min(100%, 430px); height: 5px; margin: 0 0 13px; accent-color: var(--blue-1); cursor: pointer;
+    --seek-progress: 0%;
+    appearance: none; -webkit-appearance: none;
+    width: min(100%, 430px); height: 8px; margin: 0 0 16px; border: 0; border-radius: 999px;
+    background: linear-gradient(90deg, var(--blue-1) 0 var(--seek-progress), rgba(160,200,255,.2) var(--seek-progress) 100%);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(160,200,255,.08); cursor: pointer;
   }
+  #seekBar::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; border: 3px solid #eaf2ff; border-radius: 50%; background: var(--blue-2); box-shadow: 0 2px 7px rgba(0,0,0,.38); }
+  #seekBar::-moz-range-thumb { width: 12px; height: 12px; border: 3px solid #eaf2ff; border-radius: 50%; background: var(--blue-2); box-shadow: 0 2px 7px rgba(0,0,0,.38); }
+  #seekBar:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
   #seekBar:disabled { opacity: .3; cursor: default; }
+  .playback-controls[hidden] { display: none; }
 
   /* ---------- Hidden player ---------- */
   #hidden-player {
@@ -118,6 +127,33 @@
   }
   #hidden-player iframe { width: 200px; height: 200px; border: 0; }
 
+  /* ---------- Album browser ---------- */
+  #browser { display: none; width: min(100%, 720px); height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 0 max(18px, env(safe-area-inset-bottom)); }
+  body[data-state="browsing"] { display: block; overflow: hidden; padding: 0 18px; }
+  body[data-state="browsing"] .home-ui { display: none; }
+  body[data-state="browsing"] #browser { display: flex; flex-direction: column; }
+  .browser-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  #browserBack { width: 44px; height: 44px; border: 1px solid rgba(160,200,255,.35); border-radius: 50%; background: rgba(255,255,255,.07); color: var(--ink); font-size: 28px; line-height: 1; cursor: pointer; }
+  #browserBack:focus-visible, .album-card:focus-visible, .track-row:focus-visible, #queueAlbum:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  #browserTitle { margin: 0; font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #browserSub { margin: 3px 0 0; color: var(--muted); font-size: 14px; }
+  #browserList { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 24px; }
+  .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 14px; }
+  .album-card { appearance: none; padding: 0; color: var(--ink); text-align: left; border: 0; background: none; cursor: pointer; min-width: 0; }
+  .album-card img, .album-cover-placeholder { width: 100%; aspect-ratio: 1; display: block; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,.09); }
+  .album-card strong { display: block; font-size: 14px; line-height: 1.25; margin-top: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .album-card span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .album-detail { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+  .album-detail img, .album-detail .album-cover-placeholder { width: 92px; height: 92px; flex: 0 0 92px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,.09); }
+  .album-detail h3 { margin: 0; font-size: 18px; line-height: 1.25; }
+  .album-detail p { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
+  #queueAlbum { width: 100%; min-height: 45px; border: 0; border-radius: 10px; color: #fff; background: var(--blue-2); font: inherit; font-weight: 650; cursor: pointer; margin-bottom: 12px; }
+  .track-row { width: 100%; display: flex; gap: 12px; align-items: center; border: 0; border-bottom: 1px solid rgba(160,200,255,.16); padding: 14px 6px; color: var(--ink); background: transparent; cursor: pointer; text-align: left; font: inherit; }
+  .track-number { width: 26px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .track-name { flex: 1; min-width: 0; }
+  .track-action { color: var(--blue-1); font-size: 13px; }
+  .browser-message { color: var(--muted); text-align: center; padding: 42px 14px; }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; }
   }
@@ -125,7 +161,7 @@
 </head>
 <body data-state="idle">
 
-  <section class="search-area" aria-label="Find music">
+  <section class="search-area home-ui" aria-label="Find music">
     <div class="search-row">
       <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
       <button id="dictate" type="button" aria-label="Clear search and focus the text field" title="Clear search and use keyboard dictation">
@@ -138,36 +174,43 @@
     </div>
   </section>
 
-  <div class="text" aria-live="polite">
-    <p id="status">Search for a song</p>
+  <div class="text home-ui" aria-live="polite" hidden>
+    <p id="status"></p>
     <p id="sub"></p>
   </div>
 
-  <input id="seekBar" type="range" min="0" max="100" step="0.1" value="0" disabled aria-label="Song position">
-  <div class="transport" aria-label="Playback controls">
-    <button id="previous" class="skip" type="button" disabled aria-label="Previous track or restart track">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-    </button>
-    <button id="seekBack" class="seek" type="button" disabled aria-label="Back 10 seconds" title="Back 10 seconds">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7v10l-7-5zm8 0v10l-7-5z"/></svg>
-    </button>
-    <button id="play" type="button" disabled aria-label="Play">
-      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
-    </button>
-    <button id="seekForward" class="seek" type="button" disabled aria-label="Forward 10 seconds" title="Forward 10 seconds">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7v10l7-5zm8 0v10l7-5z"/></svg>
-    </button>
-    <button id="next" class="skip" type="button" disabled aria-label="Next queued track">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
-    </button>
+  <div class="playback-controls home-ui" hidden>
+    <input id="seekBar" type="range" min="0" max="100" step="0.1" value="0" disabled aria-label="Song position">
+    <div class="transport" aria-label="Playback controls">
+      <button id="previous" class="skip" type="button" disabled aria-label="Previous track or restart track">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <button id="seekBack" class="seek" type="button" disabled aria-label="Back 10 seconds" title="Back 10 seconds">-10</button>
+      <button id="play" type="button" disabled aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <button id="seekForward" class="seek" type="button" disabled aria-label="Forward 10 seconds" title="Forward 10 seconds">+10</button>
+      <button id="next" class="skip" type="button" disabled aria-label="Next queued track">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
+      </button>
+    </div>
   </div>
+
+  <section id="browser" aria-live="polite" aria-label="Music browser">
+    <header class="browser-head">
+      <button id="browserBack" type="button" aria-label="Back to home">‹</button>
+      <div><h2 id="browserTitle">Albums</h2><p id="browserSub"></p></div>
+    </header>
+    <div id="browserList"></div>
+  </section>
 
   <div id="hidden-player" aria-hidden="true"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
   const playBtn = $('play'), previousBtn = $('previous'), nextBtn = $('next'), seekBackBtn = $('seekBack'), seekForwardBtn = $('seekForward'), seekBar = $('seekBar'), statusEl = $('status'), subEl = $('sub');
+  const textArea = statusEl.parentElement, playbackControls = document.querySelector('.playback-controls');
   const holder = $('hidden-player');
 
   // iPhone Safari can retain its automatic form-focus zoom after the keyboard
@@ -190,12 +233,24 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   function setState(s) { document.body.dataset.state = s; }
-  function setStatus(t, isErr) { statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); }
-  function setSub(t) { subEl.textContent = t || ''; }
+  function setStatus(t, isErr) { statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); textArea.hidden = !t && !subEl.textContent; }
+  function setSub(t) { subEl.textContent = t || ''; textArea.hidden = !statusEl.textContent && !subEl.textContent; }
+  function setSeekValue(value) {
+    const max = Number(seekBar.max) || 1;
+    const position = Math.max(0, Math.min(max, Number(value) || 0));
+    seekBar.value = position;
+    seekBar.style.setProperty('--seek-progress', (position / max * 100) + '%');
+  }
 
   // ---------- hidden YouTube player (iframe + postMessage) ----------
   let frame = null, playing = false, heard = false, watchdog = null, hintTimer = null;
-  let candidates = [], candIndex = 0, queue = [], history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggingSeekBar = false;
+  function savedQueue() {
+    try {
+      const items = JSON.parse(store.get('music_queue') || '[]');
+      return Array.isArray(items) ? items.filter(t => t && typeof t.query === 'string' && typeof t.title === 'string').map(t => ({ ...t, candidates: null })) : [];
+    } catch (err) { return []; }
+  }
+  let candidates = [], candIndex = 0, queue = savedQueue(), history = [], currentTrack = null, previousRequest = false, seekSeconds = null, draggingSeekBar = false;
 
   function setPlaying(p) {
     playing = p;
@@ -246,28 +301,47 @@
     setSub(c.title || '');
   }
 
-  function activateTrack(track, rememberCurrent = true) {
+  async function activateTrack(track, rememberCurrent = true) {
+    // Album queues intentionally keep only names. Resolve the YouTube result when
+    // it becomes current, so a large album does not trigger a burst of searches.
+    if (!track.candidates || !track.candidates.length) {
+      setState('searching');
+      setStatus('Looking for ' + track.title + '…');
+      try { track.candidates = (await searchYouTube(track.query)).filter(c => c.id); }
+      catch (err) { track.candidates = []; }
+      if (!track.candidates.length) {
+        setState('idle');
+        setStatus('Couldn’t find ' + track.title + '. Skipping it.', true);
+        setTimeout(() => playNextInQueue(), 700);
+        return false;
+      }
+    }
     if (rememberCurrent && currentTrack) history.push(currentTrack);
     currentTrack = track;
     candidates = track.candidates;
     candIndex = 0;
     playCandidate();
+    playbackControls.hidden = false;
     previousBtn.disabled = false;
     seekBackBtn.disabled = false;
     seekForwardBtn.disabled = false;
     seekBar.disabled = false;
-    seekBar.value = 0;
+    setSeekValue(0);
+    return true;
   }
 
   function renderQueue() {
     nextBtn.disabled = queue.length === 0;
+    // Keep metadata, not video IDs/results. It is resolved fresh only when a
+    // queued entry is due, which also makes a restored queue work after reload.
+    store.set('music_queue', JSON.stringify(queue.map(({ query, title, album, trackNumber }) => ({ query, title, album, trackNumber }))));
   }
 
-  function playNextInQueue() {
+  async function playNextInQueue() {
     if (!queue.length) return false;
     const next = queue.shift();
     renderQueue();
-    activateTrack(next);
+    await activateTrack(next);
     setStatus('Now playing from queue');
     return true;
   }
@@ -304,7 +378,7 @@
       seekBar.max = data.info.duration;
     }
     if (!draggingSeekBar && data.info && typeof data.info.currentTime === 'number') {
-      seekBar.value = Math.min(Number(seekBar.max), data.info.currentTime);
+      setSeekValue(data.info.currentTime);
     }
 
     let st = null;
@@ -314,7 +388,8 @@
     if (st === 1 || st === 3) { setPlaying(true); if (statusEl.textContent.startsWith('Ready')) setStatus('Now playing'); }
     else if (st === 0) {
       setPlaying(false);
-      if (!playNextInQueue()) setStatus('Playback finished');
+      if (queue.length) void playNextInQueue();
+      else setStatus('Playback finished');
     } else if (st === 2 || st === -1 || st === 5) setPlaying(false);
 
     if (data.event === 'onError') {
@@ -384,6 +459,180 @@
 
   function decodeHtml(s) { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
 
+  // ---------- Discogs album browsing ----------
+  const browser = $('browser'), browserTitle = $('browserTitle'), browserSub = $('browserSub'), browserList = $('browserList');
+  let browseAction = 'play';
+
+  function home() {
+    setState('idle');
+    browserList.replaceChildren();
+  }
+  function browseMessage(title, sub, message) {
+    setState('browsing'); browserTitle.textContent = title; browserSub.textContent = sub || '';
+    browserList.innerHTML = '<p class="browser-message"></p>';
+    browserList.firstChild.textContent = message;
+  }
+  function discogs(url) { return getJSON('https://api.discogs.com' + url, 10000); }
+  function musicBrainz(path) { return getJSON('https://musicbrainz.org/ws/2/' + path + (path.includes('?') ? '&' : '?') + 'fmt=json', 10000); }
+  function mbCover(id) { return 'https://coverartarchive.org/release-group/' + id + '/front-250'; }
+  function imageOrPlaceholder(url) {
+    if (!url) { const el = document.createElement('div'); el.className = 'album-cover-placeholder'; return el; }
+    const el = document.createElement('img'); el.src = url; el.alt = ''; el.loading = 'lazy'; return el;
+  }
+  function uniqAlbums(releases) {
+    const seen = new Set();
+    return releases.filter(r => {
+      const id = r.master_id || r.id;
+      if (!id || seen.has(id)) return false;
+      seen.add(id); return true;
+    });
+  }
+  function albumFromRelease(r, artistName) {
+    return { id: r.master_id || r.id, type: r.master_id ? 'masters' : 'releases', title: r.title || 'Untitled album', artist: artistName || r.artist || '', cover: r.cover_image || r.thumb || '' };
+  }
+  function renderAlbums(albums, heading, detail) {
+    setState('browsing'); browserTitle.textContent = heading; browserSub.textContent = detail || '';
+    browserList.replaceChildren();
+    if (!albums.length) { browseMessage(heading, detail, 'No albums found. Try a more specific artist or album.'); return; }
+    const grid = document.createElement('div'); grid.className = 'album-grid';
+    albums.forEach(album => {
+      const card = document.createElement('button'); card.type = 'button'; card.className = 'album-card';
+      card.append(imageOrPlaceholder(album.cover));
+      const title = document.createElement('strong'); title.textContent = album.title; card.append(title);
+      const by = document.createElement('span'); by.textContent = album.artist; card.append(by);
+      card.addEventListener('click', () => showAlbum(album)); grid.append(card);
+    });
+    browserList.append(grid);
+  }
+  async function showArtistAlbums(name) {
+    browseMessage('Albums', name, 'Finding albums…');
+    try {
+      const matches = await discogs('/database/search?type=artist&per_page=5&q=' + encodeURIComponent(name));
+      const artist = (matches.results || [])[0];
+      if (!artist || !artist.id) throw new Error('not-found');
+      const releases = await discogs('/artists/' + artist.id + '/releases?per_page=100&sort=year&sort_order=asc');
+      // Discogs' artist feed also contains singles and duplicate regional
+      // pressings. Masters with an Album format are the closest match to an
+      // artist's actual album catalogue.
+      const albums = uniqAlbums((releases.releases || []).filter(r => r.type === 'master' && /album/i.test(r.format || '')))
+        .map(r => albumFromRelease(r, artist.title));
+      if (!albums.length) return showMusicBrainzArtist(name);
+      renderAlbums(albums, 'Albums', artist.title);
+    } catch (err) { await showMusicBrainzArtist(name); }
+  }
+  async function showMusicBrainzArtist(name) {
+    browseMessage('Albums', name, 'Looking for albums…');
+    try {
+      const artists = await musicBrainz('artist/?limit=5&query=' + encodeURIComponent(name));
+      const artist = (artists.artists || [])[0];
+      if (!artist || !artist.id) throw new Error('not-found');
+      const groups = await musicBrainz('release-group?limit=100&type=album&artist=' + encodeURIComponent(artist.id));
+      const albums = (groups['release-groups'] || []).filter(g => String(g['primary-type'] || '').toLowerCase() === 'album')
+        .map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: artist.name, cover: mbCover(g.id) }));
+      renderAlbums(albums, 'Albums', artist.name);
+    } catch (err) { browseMessage('Albums', name, 'Could not find that artist. Check the spelling and try again.'); }
+  }
+  function splitAlbumQuery(query) {
+    const artistFirst = query.match(/\bartist\s+(.+?)\s+\balbum\s+(.+)$/i);
+    if (artistFirst) return { album: artistFirst[2].trim(), artist: artistFirst[1].trim() };
+    let text = query.replace(/\balbum\b/ig, '').trim();
+    let artist = '';
+    const marker = text.match(/\s+(?:by|artist)\s+(.+)$/i);
+    if (marker) { artist = marker[1].trim(); text = text.slice(0, marker.index).trim(); }
+    return { album: text, artist };
+  }
+  async function showAlbumSearch(query) {
+    const wanted = splitAlbumQuery(query);
+    browseMessage('Album', wanted.album + (wanted.artist ? ' · ' + wanted.artist : ''), 'Finding the album…');
+    try {
+      const search = await discogs('/database/search?type=release&per_page=30&q=' + encodeURIComponent(wanted.album + (wanted.artist ? ' ' + wanted.artist : '')));
+      let albums = (search.results || []).map(r => ({ id: r.id, type: 'releases', title: r.title || '', artist: '', cover: r.cover_image || r.thumb || '' }));
+      if (wanted.artist) albums = albums.filter(a => a.title.toLowerCase().includes(wanted.artist.toLowerCase()));
+      renderAlbums(albums, 'Choose an album', wanted.artist || wanted.album);
+    } catch (err) { await showMusicBrainzAlbumSearch(wanted); }
+  }
+  async function showMusicBrainzAlbumSearch(wanted) {
+    browseMessage('Choose an album', wanted.artist || wanted.album, 'Looking for the album…');
+    try {
+      // Without an explicit artist, keep the full phrase as a broad search so
+      // entries such as "album Rumours Fleetwood Mac" work without "by".
+      const terms = wanted.artist ? 'releasegroup:"' + wanted.album + '" AND artist:"' + wanted.artist + '"' : wanted.album;
+      const results = await musicBrainz('release-group?limit=30&query=' + encodeURIComponent(terms));
+      const albums = (results['release-groups'] || []).map(g => ({ id: g.id, type: 'mb-group', title: g.title, artist: (g['artist-credit'] || []).map(a => a.name).join(', '), cover: mbCover(g.id) }));
+      renderAlbums(albums, 'Choose an album', wanted.artist || wanted.album);
+    } catch (err) { browseMessage('Album', wanted.album, 'Could not find that album.'); }
+  }
+  async function showAlbum(album) {
+    if (album.type === 'mb-group') return showMusicBrainzAlbum(album);
+    browseMessage('Album', album.title, 'Loading tracks…');
+    try {
+      const data = await discogs('/' + album.type + '/' + album.id);
+      const tracks = (data.tracklist || []).filter(t => t.type_ !== 'heading' && t.title);
+      setState('browsing'); browserTitle.textContent = data.title || album.title; browserSub.textContent = data.artists_sort || album.artist || '';
+      browserList.replaceChildren();
+      const detail = document.createElement('div'); detail.className = 'album-detail'; detail.append(imageOrPlaceholder(data.cover_image || data.thumb || album.cover));
+      const copy = document.createElement('div'); const h = document.createElement('h3'); h.textContent = data.title || album.title;
+      const p = document.createElement('p'); p.textContent = tracks.length + ' track' + (tracks.length === 1 ? '' : 's'); copy.append(h, p); detail.append(copy); browserList.append(detail);
+      if (!tracks.length) { const empty = document.createElement('p'); empty.className = 'browser-message'; empty.textContent = 'This Discogs listing has no track list.'; browserList.append(empty); return; }
+      const queueAlbum = document.createElement('button'); queueAlbum.type = 'button'; queueAlbum.id = 'queueAlbum'; queueAlbum.textContent = 'Queue album';
+      queueAlbum.addEventListener('click', () => {
+        tracks.forEach((track, i) => queue.push({ query: (data.artists_sort || album.artist || '') + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position || (i + 1), candidates: null }));
+        renderQueue(); home(); setStatus('Album queued'); setSub((data.title || album.title) + ' · ' + tracks.length + ' tracks');
+      });
+      browserList.append(queueAlbum);
+      tracks.forEach((track, i) => {
+        const row = document.createElement('button'); row.type = 'button'; row.className = 'track-row';
+        const num = document.createElement('span'); num.className = 'track-number'; num.textContent = track.position || (i + 1);
+        const title = document.createElement('span'); title.className = 'track-name'; title.textContent = track.title;
+        const action = document.createElement('span'); action.className = 'track-action'; action.textContent = browseAction === 'queue' ? 'Queue' : 'Play';
+        row.append(num, title, action);
+        row.addEventListener('click', async () => {
+          const item = { query: (data.artists_sort || album.artist || '') + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position || (i + 1), candidates: null };
+          home();
+          if (browseAction === 'queue') { queue.push(item); renderQueue(); setStatus('Added to queue'); setSub(track.title); }
+          else await activateTrack(item);
+        });
+        browserList.append(row);
+      });
+    } catch (err) { browseMessage('Album', album.title, 'Discogs could not load this track list.'); }
+  }
+  async function showMusicBrainzAlbum(album) {
+    browseMessage('Album', album.title, 'Loading tracks…');
+    try {
+      const releases = await musicBrainz('release?limit=100&release-group=' + encodeURIComponent(album.id));
+      const release = (releases.releases || []).sort((a, b) => (b['track-count'] || 0) - (a['track-count'] || 0))[0];
+      if (!release || !release.id) throw new Error('not-found');
+      const data = await musicBrainz('release/' + release.id + '?inc=recordings');
+      const tracks = (data.media || []).flatMap(m => m.tracks || []).map((t, i) => ({ title: t.title || (t.recording && t.recording.title), position: t.position || (i + 1) })).filter(t => t.title);
+      const artist = (data['artist-credit'] || []).map(a => a.name).join(', ') || album.artist;
+      setState('browsing'); browserTitle.textContent = data.title || album.title; browserSub.textContent = artist;
+      browserList.replaceChildren();
+      const detail = document.createElement('div'); detail.className = 'album-detail'; detail.append(imageOrPlaceholder(album.cover));
+      const copy = document.createElement('div'); const h = document.createElement('h3'); h.textContent = data.title || album.title;
+      const p = document.createElement('p'); p.textContent = tracks.length + ' track' + (tracks.length === 1 ? '' : 's'); copy.append(h, p); detail.append(copy); browserList.append(detail);
+      if (!tracks.length) throw new Error('no-tracks');
+      const add = (track) => ({ query: artist + ' ' + track.title, title: track.title, album: data.title || album.title, trackNumber: track.position, candidates: null });
+      const queueAlbum = document.createElement('button'); queueAlbum.type = 'button'; queueAlbum.id = 'queueAlbum'; queueAlbum.textContent = 'Queue album';
+      queueAlbum.addEventListener('click', () => { tracks.forEach(t => queue.push(add(t))); renderQueue(); home(); setStatus('Album queued'); setSub((data.title || album.title) + ' · ' + tracks.length + ' tracks'); });
+      browserList.append(queueAlbum);
+      tracks.forEach(track => {
+        const row = document.createElement('button'); row.type = 'button'; row.className = 'track-row';
+        const num = document.createElement('span'); num.className = 'track-number'; num.textContent = track.position;
+        const title = document.createElement('span'); title.className = 'track-name'; title.textContent = track.title;
+        const action = document.createElement('span'); action.className = 'track-action'; action.textContent = browseAction === 'queue' ? 'Queue' : 'Play'; row.append(num, title, action);
+        row.addEventListener('click', async () => { const item = add(track); home(); if (browseAction === 'queue') { queue.push(item); renderQueue(); setStatus('Added to queue'); setSub(track.title); } else await activateTrack(item); });
+        browserList.append(row);
+      });
+    } catch (err) { browseMessage('Album', album.title, 'Could not load this track list.'); }
+  }
+  function browseQuery(query, action) {
+    browseAction = action;
+    if (/\balbum\b/i.test(query)) return showAlbumSearch(query);
+    const artist = query.replace(/\bartist\b/ig, '').trim();
+    return showArtistAlbums(artist || query);
+  }
+  $('browserBack').addEventListener('click', home);
+
   async function findAndPlay(q) {
     setState('searching');
     setStatus('Looking for it…');
@@ -400,7 +649,7 @@
       setStatus('No results. Try another song or artist.', true);
       return;
     }
-    activateTrack({ query: q, title: candidates[0].title || q, candidates: candidates });
+    await activateTrack({ query: q, title: candidates[0].title || q, candidates: candidates });
   }
 
   async function findAndQueue(q) {
@@ -432,12 +681,14 @@
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
     $('manualQuery').blur();
+    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q, 'play'); return; }
     findAndPlay(q);
   }
   function manualQueue() {
     const q = $('manualQuery').value.trim();
     if (!q || document.body.dataset.state === 'searching') return;
     $('manualQuery').blur();
+    if (/\b(?:artist|album)\b/i.test(q)) { browseQuery(q, 'queue'); return; }
     findAndQueue(q);
   }
   $('manualSearch').addEventListener('click', manualSearch);
