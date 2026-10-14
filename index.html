@@ -55,12 +55,15 @@
   }
   #manualQuery::placeholder { color: var(--muted); opacity: .8; }
   #manualQuery:focus, #manualQuery:focus-visible { outline: none; border-color: var(--accent); box-shadow: none; }
-  #dictate {
+  #dictate, #voice {
     width: 48px; flex: 0 0 48px; border: 1px solid var(--line); border-radius: 10px;
     color: var(--ink); background: var(--surface); cursor: pointer; display: grid; place-items: center;
   }
-  #dictate svg { width: 22px; height: 22px; fill: currentColor; }
-  #dictate:active { transform: scale(.94); }
+  #dictate svg, #voice svg { width: 22px; height: 22px; fill: currentColor; }
+  #dictate:active, #voice:active { transform: scale(.94); }
+  #voice.listening { background: #b3261e; border-color: transparent; color: #fff; animation: voicePulse 1.2s ease-in-out infinite; }
+  @keyframes voicePulse { 50% { opacity: .65; } }
+  @media (prefers-reduced-motion: reduce) { #voice.listening { animation: none; } }
   .search-actions { display: flex; gap: 8px; margin-top: 8px; }
   .search-actions button {
     flex: 1; min-height: 44px; font: inherit; font-size: 15px; font-weight: 650; color: var(--btn-ink);
@@ -246,7 +249,10 @@
     <div id="recentSearches" class="recent" hidden aria-label="Recent artist and album searches"></div>
     <div class="search-row">
       <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
-      <button id="dictate" type="button" aria-label="Clear search and focus the text field" title="Clear search and use keyboard dictation">
+      <button id="dictate" type="button" aria-label="Clear search and open the keyboard" title="Clear search and type">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+      </button>
+      <button id="voice" type="button" aria-label="Clear search and start voice input" title="Clear search and speak">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
       </button>
     </div>
@@ -696,7 +702,7 @@
   }
 
   async function searchYouTube(q) {
-    const enc = encodeURIComponent(q + ' Official Audio');
+    const enc = encodeURIComponent(/\(Official Audio\)\s*$/i.test(q) ? q : q + ' Official Audio');
     const key = store.get('yt_api_key');
 
     if (key) {
@@ -781,25 +787,15 @@
   function albumFromRelease(r, artistName) {
     return { id: r.master_id || r.id, type: r.master_id ? 'masters' : 'releases', title: r.title || 'Untitled album', artist: artistName || r.artist || '', thumb: r.thumb || '', cover: r.cover_image || '' };
   }
-  // Build a queue entry whose search query carries artist + song + album, so the
-  // YouTube lookup is more likely to hit the right recording. Parts already
-  // contained in another part (e.g. self-titled albums) are not repeated.
+  // Build a queue entry. The search query mirrors the most common YouTube title
+  // for a song: "Artist - Song (Official Audio)". The album is deliberately left
+  // out of the query, since it rarely appears in the video title.
   function cleanName(s) { return String(s || '').replace(/\s*\(\d+\)\s*$/, '').replace(/\s+/g, ' ').trim(); } // Discogs "Artist (2)"
   function trackItem(artist, albumTitle, trackTitle, position, thumbnail) {
     artist = cleanName(artist); albumTitle = cleanName(albumTitle); trackTitle = cleanName(trackTitle);
     if (/^various(?: artists)?$/i.test(artist)) artist = '';
-    const parts = [];
-    [artist, trackTitle, albumTitle].forEach(part => {
-      if (!part) return;
-      const low = part.toLowerCase();
-      if (parts.some(p => p.toLowerCase().includes(low))) return;
-      for (let i = parts.length - 1; i >= 0; i--) if (low.includes(parts[i].toLowerCase())) parts.splice(i, 1);
-      parts.push(part);
-    });
-    // keep a stable order: artist, song, album
-    const order = [artist, trackTitle, albumTitle].map(x => x.toLowerCase());
-    parts.sort((a, b) => order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase()));
-    return { query: parts.join(' '), title: trackTitle, album: albumTitle, artist, thumbnail: thumbnail || '', trackNumber: position, candidates: null };
+    const query = (artist ? artist + ' - ' : '') + trackTitle + ' (Official Audio)';
+    return { query, title: trackTitle, album: albumTitle, artist, thumbnail: thumbnail || '', trackNumber: position, candidates: null };
   }
   function discogsArtist(data, album) {
     const names = (data.artists || []).map(a => cleanName(a.name)).filter(Boolean);
@@ -1305,11 +1301,53 @@
   $('manualQueue').addEventListener('click', manualQueue);
   const manualQuery = $('manualQuery');
   manualQuery.addEventListener('keydown', (e) => { if (e.key === 'Enter') manualSearch(); });
+  // Keyboard button: clear the field and bring up the keyboard.
   $('dictate').addEventListener('click', () => {
-    const field = manualQuery;
-    field.value = '';
-    field.focus();
-    flash('Use your keyboard’s dictation to enter a song', '');
+    stopVoice();
+    manualQuery.value = '';
+    manualQuery.focus();
+  });
+
+  // Mic button: clear the field and fill it from the Web Speech API.
+  const voiceBtn = $('voice');
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+  function setListening(on) {
+    voiceBtn.classList.toggle('listening', on);
+    voiceBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    voiceBtn.setAttribute('aria-label', on ? 'Stop voice input' : 'Clear search and start voice input');
+  }
+  function stopVoice() { if (recognizer) { try { recognizer.stop(); } catch (e) {} } }
+  voiceBtn.addEventListener('click', () => {
+    if (recognizer) { stopVoice(); return; } // tap again to stop
+    if (!SpeechRec) { flash('Voice input isn’t supported in this browser. Use the keyboard instead.', undefined, true); return; }
+    manualQuery.value = '';
+    manualQuery.blur();
+    const rec = new SpeechRec();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    let gotText = false, failed = false;
+    rec.onresult = (e) => {
+      let text = '';
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+      manualQuery.value = text.trim();
+      if (manualQuery.value) gotText = true;
+    };
+    rec.onerror = (e) => {
+      failed = true;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') flash('Microphone access was blocked. Allow it in your browser settings.', undefined, true);
+      else if (e.error === 'no-speech') flash('Didn’t catch anything. Tap the mic and try again.', undefined, true);
+      else if (e.error !== 'aborted') flash('Voice input failed. Try again or use the keyboard.', undefined, true);
+    };
+    rec.onend = () => {
+      recognizer = null; setListening(false);
+      if (!gotText && !failed) flash('Didn’t catch anything. Tap the mic and try again.', undefined, true);
+    };
+    recognizer = rec;
+    try { rec.start(); setListening(true); }
+    catch (err) { recognizer = null; setListening(false); flash('Couldn’t start voice input.', undefined, true); }
   });
   nextBtn.addEventListener('click', () => {
     if (!queue.length) return;
