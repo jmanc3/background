@@ -32,9 +32,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    justify-content: safe center; /* tall content starts at the top instead of being clipped */
-    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    justify-content: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(120px, calc(100px + env(safe-area-inset-bottom))) max(16px, env(safe-area-inset-left));
     overflow-x: hidden;
     overflow-y: auto;
     user-select: none;
@@ -45,7 +44,7 @@
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---------- Search ---------- */
-  .search-area { width: min(100%, 440px); margin-bottom: 28px; }
+  .search-area { width: min(100%, 480px); margin-bottom: 20px; }
   .search-row { display: flex; gap: 8px; }
   #manualQuery {
     flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink);
@@ -73,7 +72,10 @@
   .search-actions button:active { transform: scale(.98); }
 
   /* ---------- Text ---------- */
-  .text { text-align: center; max-width: 440px; min-height: 76px; margin-bottom: 28px; }
+  .text { display: none; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 80px); z-index: 40; width: max-content; max-width: min(calc(100% - 32px), 440px); text-align: center; background: var(--btn); color: var(--btn-ink); border-radius: 16px; padding: 10px 16px; box-shadow: 0 8px 24px rgba(0,0,0,.25); margin: 0; min-height: 0; }
+  .text.flashing:not([hidden]), body[data-state="searching"] .text:not([hidden]) { display: block; }
+  #status { font-size: 15px !important; }
+  #sub { color: inherit !important; opacity: .75; font-size: 13px !important; }
   .text[hidden] { display: none; }
   #status { font-size: 19px; font-weight: 600; line-height: 1.3; margin: 0; }
   #status.err { color: var(--err); font-weight: 500; }
@@ -191,7 +193,7 @@
   .browser-head > div { min-width: 0; }
   #browserTitle { margin: 0; font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #browserSub { margin: 3px 0 0; color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #browserList { flex: 1; min-height: 0; overflow-x: hidden; overscroll-behavior: contain; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 24px; }
+  #browserList { flex: 1; min-height: 0; overflow-x: hidden; overscroll-behavior: contain; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 2px 120px; }
   .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 14px; }
   .album-card { min-width: 0; }
   .album-open { appearance: none; display: block; width: 100%; padding: 0; color: var(--ink); text-align: left; font: inherit; border: 0; background: none; cursor: pointer; min-width: 0; }
@@ -215,6 +217,71 @@
   .track-number { width: 26px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
   .track-name { flex: 1; min-width: 0; }
   .browser-message { color: var(--muted); text-align: center; padding: 42px 14px; }
+
+
+  /* ---------- Played history: 4 swipeable pages of 3x3 ---------- */
+  .hist { width: min(100%, 480px); }
+  .hist-hint { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  .hist-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hist-pager::-webkit-scrollbar { display: none; }
+  .hist-page { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; align-content: start; padding: 2px; }
+  .hist-cell { appearance: none; border: 0; background: none; padding: 0; margin: 0; min-width: 0; text-align: left; font: inherit; color: var(--ink); cursor: pointer; -webkit-touch-callout: none; }
+  .hist-cell:active .hist-art { transform: scale(.96); }
+  .hist-art { aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--surface-2); transition: transform .12s; }
+  .hist-art img, .hist-art .album-cover-placeholder { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 0; }
+  .hist-cell strong { display: block; font-size: 13px; line-height: 1.25; margin-top: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-cell span { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-cell.empty { pointer-events: none; }
+  .hist-cell.empty .hist-art { opacity: .45; }
+  .hist-cell.empty strong { height: 16px; }
+  .hist-dots { display: flex; justify-content: center; gap: 4px; margin-top: 12px; }
+  .hist-dots button { width: 22px; height: 22px; border: 0; background: none; padding: 0; display: grid; place-items: center; cursor: pointer; }
+  .hist-dots button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .15s, transform .15s; }
+  .hist-dots button.on::before { background: var(--ink); transform: scale(1.15); }
+
+  /* ---------- Long-press / right-click menu ---------- */
+  #ctxMenu { position: fixed; z-index: 60; min-width: 220px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 40px rgba(30,27,22,.28); display: flex; flex-direction: column; }
+  #ctxMenu[hidden] { display: none; }
+  #ctxMenu button { appearance: none; border: 0; background: none; font: inherit; font-size: 15px; color: var(--ink); text-align: left; padding: 12px 14px; border-radius: 9px; cursor: pointer; min-height: 44px; }
+  #ctxMenu button:hover, #ctxMenu button:focus-visible { background: var(--surface-2); }
+  #ctxMenu button.danger { color: var(--err); border-top: 1px solid var(--line); border-radius: 0 0 9px 9px; margin-top: 4px; }
+
+  /* ---------- Now-playing island ---------- */
+  #islandBackdrop { position: fixed; inset: 0; z-index: 25; background: rgba(0,0,0,.38); }
+  .island {
+    --surface: #2c2925; --surface-2: #3a362f; --line: rgba(255,255,255,.14); --ink: #fff; --muted: #a9a399; --btn: #fff; --btn-ink: #1d1b18;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 30;
+    width: min(calc(100% - 24px), 440px); background: #1d1b18; color: #fff; border-radius: 32px; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3); user-select: none; -webkit-user-select: none;
+  }
+  .island[hidden] { display: none; }
+  .island-mini { display: flex; align-items: center; gap: 12px; height: 64px; padding: 8px 10px 8px 8px; cursor: pointer; }
+  .island-art { flex: 0 0 48px; width: 48px; height: 48px; }
+  .island-art img, .island-art .album-cover-placeholder { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; display: block; }
+  .island-text { flex: 1; min-width: 0; }
+  .island-text strong { display: block; font-size: 14px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .island-text span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-play { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: #1d1b18; display: grid; place-items: center; cursor: pointer; }
+  .mini-play svg { width: 22px; height: 22px; fill: currentColor; }
+  .mini-play:active { transform: scale(.92); }
+  .mini-play .i-pause { display: none; }
+  .mini-play.on .i-pause { display: block; }
+  .mini-play.on .i-play { display: none; }
+  .island-full { display: none; padding: 4px 18px 22px; max-height: calc(100dvh - 60px - env(safe-area-inset-top)); overflow-y: auto; overscroll-behavior: contain; }
+  .island.open .island-mini { display: none; }
+  .island.open .island-full { display: block; animation: islandIn .24s ease; }
+  @keyframes islandIn { from { opacity: 0; transform: translateY(18px) scale(.97); } }
+  .island-grab { display: block; width: 100%; height: 26px; border: 0; background: none; cursor: pointer; padding: 0; }
+  .island-grab::before { content: ""; display: block; width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); margin: 0 auto; }
+  .island-hero { text-align: center; margin-bottom: 16px; }
+  #heroArt img, #heroArt .album-cover-placeholder { width: min(62vw, 230px); aspect-ratio: 1; border-radius: 16px; object-fit: cover; margin: 0 auto; display: block; }
+  .island-hero strong { display: block; font-size: 18px; margin-top: 14px; line-height: 1.25; overflow-wrap: anywhere; }
+  .island-hero span { display: block; color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .island #seekBar { background: linear-gradient(90deg, var(--accent) 0 var(--seek-progress), rgba(255,255,255,.22) var(--seek-progress) 100%); width: 100%; }
+  .island #play:not(:disabled):hover { background: #e8e4dc; }
+  .island .q-row.dragging { background: #3a362f; }
+  .island .queue-panel { width: 100%; }
+  @media (prefers-reduced-motion: reduce) { .island.open .island-full { animation: none; } }
 
   /* ---------- Small phones ---------- */
   @media (max-width: 380px) {
@@ -246,7 +313,6 @@
 <body data-state="idle">
 
   <section class="search-area home-ui" aria-label="Find music">
-    <div id="recentSearches" class="recent" hidden aria-label="Recent artist and album searches"></div>
     <div class="search-row">
       <input id="manualQuery" type="text" placeholder="Song and artist" autocomplete="off" spellcheck="false" enterkeyhint="search">
       <button id="dictate" type="button" aria-label="Clear search and open the keyboard" title="Clear search and type">
@@ -262,12 +328,39 @@
     </div>
   </section>
 
-  <div class="text home-ui" aria-live="polite" hidden>
+  <section class="hist home-ui" aria-label="Recently played">
+    <p id="histHint" class="hist-hint" hidden>Songs and albums you play will show up here.</p>
+    <div id="histPager" class="hist-pager"></div>
+    <div id="histDots" class="hist-dots" aria-hidden="true"></div>
+  </section>
+
+  <div class="text" aria-live="polite" hidden>
     <p id="status"></p>
     <p id="sub"></p>
   </div>
 
-  <div class="playback-controls home-ui" hidden>
+  <section id="browser" aria-live="polite" aria-label="Music browser">
+    <header class="browser-head">
+      <button id="browserBack" type="button" aria-label="Back to home">‹</button>
+      <div><h2 id="browserTitle">Albums</h2><p id="browserSub"></p></div>
+    </header>
+    <div id="browserList"></div>
+  </section>
+
+  <div id="islandBackdrop" hidden></div>
+  <aside id="island" class="island" hidden aria-label="Now playing">
+    <div id="islandMini" class="island-mini" role="button" tabindex="0" aria-label="Open player">
+      <div id="islandArt" class="island-art"></div>
+      <div class="island-text"><strong id="islandTitle"></strong><span id="islandArtist"></span></div>
+      <button id="miniPlay" class="mini-play" type="button" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+    </div>
+    <div class="island-full">
+      <button id="islandClose" class="island-grab" type="button" aria-label="Collapse player"></button>
+      <div class="island-hero"><div id="heroArt"></div><strong id="heroTitle"></strong><span id="heroArtist"></span></div>
+  <div class="playback-controls" hidden>
     <input id="seekBar" type="range" min="0" max="100" step="0.1" value="0" disabled aria-label="Song position">
     <div class="transport" aria-label="Playback controls">
       <button id="previous" class="skip" type="button" disabled aria-label="Previous track or restart track">
@@ -285,7 +378,7 @@
     </div>
   </div>
 
-  <section id="queuePanel" class="queue-panel home-ui" aria-label="Up next" hidden>
+  <section id="queuePanel" class="queue-panel" aria-label="Up next" hidden>
     <header class="queue-head">
       <h2>Up next · <span id="queueCount">0</span></h2>
       <button id="clearQueue" type="button">Clear all</button>
@@ -293,13 +386,9 @@
     <ol id="queueList"></ol>
   </section>
 
-  <section id="browser" aria-live="polite" aria-label="Music browser">
-    <header class="browser-head">
-      <button id="browserBack" type="button" aria-label="Back to home">‹</button>
-      <div><h2 id="browserTitle">Albums</h2><p id="browserSub"></p></div>
-    </header>
-    <div id="browserList"></div>
-  </section>
+    </div>
+  </aside>
+  <div id="ctxMenu" role="menu" hidden></div>
 
   <div id="hidden-player" aria-hidden="true"></div>
 
@@ -329,7 +418,7 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   function setState(s) { document.body.dataset.state = s; }
-  function setStatus(t, isErr) { clearTimeout(revertTimer); statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); textArea.hidden = !t && !subEl.textContent; }
+  function setStatus(t, isErr) { clearTimeout(revertTimer); textArea.classList.toggle('flashing', !!isErr); statusEl.textContent = t; statusEl.classList.toggle('err', !!isErr); textArea.hidden = !t && !subEl.textContent; }
   function setSub(t) { subEl.textContent = t || ''; textArea.hidden = !statusEl.textContent && !subEl.textContent; }
   // Temporary messages ("Added to queue", errors, ...) fall back to whatever the
   // player is really doing once their time is up. Any later setStatus() cancels
@@ -342,9 +431,9 @@
     if (!currentTrack && !frame && queue.length) return { status: 'Tap play to start the queue', sub: queue[0].title || '' };
     return { status: '', sub: '' };
   }
-  function restoreBaseline() { const b = baselineMessage(); setStatus(b.status); setSub(b.sub); }
+  function restoreBaseline() { textArea.classList.remove('flashing'); const b = baselineMessage(); setStatus(b.status); setSub(b.sub); }
   function flash(status, sub, isErr) {
-    statusEl.textContent = status; statusEl.classList.toggle('err', !!isErr);
+    statusEl.textContent = status; statusEl.classList.toggle('err', !!isErr); textArea.classList.add('flashing');
     if (sub !== undefined) subEl.textContent = sub || '';
     textArea.hidden = !statusEl.textContent && !subEl.textContent;
     clearTimeout(revertTimer);
@@ -371,6 +460,7 @@
     playing = p;
     playBtn.classList.toggle('on', p);
     playBtn.setAttribute('aria-label', p ? 'Pause' : 'Play');
+    const mp = $('miniPlay'); if (mp) { mp.classList.toggle('on', p); mp.setAttribute('aria-label', p ? 'Pause' : 'Play'); }
   }
 
   function command(func, args) {
@@ -461,6 +551,8 @@
         return false;
       }
     }
+    if (!track.thumbnail && track.candidates[0]) track.thumbnail = 'https://i.ytimg.com/vi/' + track.candidates[0].id + '/mqdefault.jpg';
+    if (rememberCurrent) recordPlayed(track);
     if (rememberCurrent && currentTrack) history.push(currentTrack);
     currentTrack = track; playbackFinished = false; pendingResume = false;
     candidates = track.candidates;
@@ -468,6 +560,7 @@
     playCandidate();
     enableTransport();
     setSeekValue(0);
+    updateIsland();
     return true;
   }
 
@@ -477,6 +570,7 @@
     // queued entry is due, which also makes a restored queue work after reload.
     store.set('music_queue', JSON.stringify(queue.map(({ query, title, album, artist, thumbnail, trackNumber, albumRef }) => ({ query, title, album, artist, thumbnail, trackNumber, albumRef }))));
     renderQueueList();
+    updateIsland();
     if (!frame && !currentTrack) { // nothing loaded (e.g. after a reload): let the queue be started
       const has = queue.length > 0;
       playbackControls.hidden = !has; playBtn.disabled = !has;
@@ -756,13 +850,13 @@
   function imageOrPlaceholder(small, large) {
     small = small || large; large = large || '';
     if (!small) { const el = document.createElement('div'); el.className = 'album-cover-placeholder'; return el; }
-    const el = document.createElement('img'); el.alt = ''; el.loading = 'lazy'; el.decoding = 'async'; el.src = small;
+    const el = document.createElement('img'); el.alt = ''; el.loading = 'lazy'; el.decoding = 'async'; setArt(el, small);
     if (!large || large === small) return el;
     let started = false;
     const upgrade = () => {
       if (started) return; started = true;
       const hi = new Image(); hi.decoding = 'async';
-      hi.onload = () => { el.src = large; };
+      hi.onload = () => { setArt(el, large); };
       hi.src = large;
     };
     const arm = () => {
@@ -814,7 +908,6 @@
   let searchHistory = loadList('music_searches', e => e.key && (Array.isArray(e.albums) || Array.isArray(e.artists)) && !(e.key.startsWith('artist:') && !(Array.isArray(e.artists) && e.v >= 4)));
   let albumCache = loadList('music_albums', e => e.key && Array.isArray(e.tracks));
   let artistCache = loadList('music_artist_albums', e => e.key && Array.isArray(e.albums));
-  const recentEl = $('recentSearches');
   function normKey(q) { return q.toLowerCase().replace(/\s+/g, ' ').trim(); }
   function rememberSearch(entry) {
     searchHistory = [entry, ...searchHistory.filter(e => e.key !== entry.key)].slice(0, SEARCH_MAX);
@@ -829,19 +922,7 @@
     artistCache = [...artistCache.filter(a => a.key !== entry.key), entry].slice(-30);
     store.set('music_artist_albums', JSON.stringify(artistCache));
   }
-  function renderBubbles() {
-    recentEl.hidden = searchHistory.length === 0;
-    recentEl.replaceChildren(...searchHistory.map(entry => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'bubble';
-      b.textContent = entry.label; b.title = entry.label;
-      b.addEventListener('click', () => showSearchResults(entry));
-      return b;
-    }));
-  }
-  // Let a mouse wheel scroll the strip sideways.
-  recentEl.addEventListener('wheel', e => {
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && recentEl.scrollWidth > recentEl.clientWidth) { recentEl.scrollLeft += e.deltaY; e.preventDefault(); }
-  }, { passive: false });
+  function renderBubbles() {} // recent-search bubbles removed
 
   // ---------- actions (every album / track has Play and Queue) ----------
   function albumItems(detail) {
@@ -859,8 +940,8 @@
     queue.push(...items); renderQueue(); home();
     flash('Album queued', detail.title + ' · ' + items.length + ' tracks'); startQueueIfIdle();
   }
-  function playTrack(item) { home(); void activateTrack(item); }
-  function queueTrack(item) { queue.push(item); renderQueue(); home(); flash('Added to queue', item.title); startQueueIfIdle(); }
+  function playTrack(item) { item.direct = true; home(); void activateTrack(item); }
+  function queueTrack(item) { item.direct = true; queue.push(item); renderQueue(); home(); flash('Added to queue', item.title); startQueueIfIdle(); }
   function miniButton(label, kind, onClick) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'mini-btn ' + kind; b.textContent = label;
     b.addEventListener('click', onClick); return b;
@@ -1373,10 +1454,178 @@
     if (!frame) return;
     command('seekTo', [Number(seekBar.value), true]);
   });
+  // ---------- image cache: Cache API + blob URLs (falls back to the plain URL) ----------
+  const ART_CACHE = 'music-art-v1', artMem = new Map();
+  async function artSrc(url) {
+    if (artMem.has(url)) return artMem.get(url);
+    if (!url || /^(data|blob):/.test(url) || !('caches' in window)) return url;
+    try {
+      const c = await caches.open(ART_CACHE);
+      let r = await c.match(url);
+      if (!r) {
+        r = await fetch(url, { mode: 'cors' });
+        if (!r.ok) throw new Error('bad');
+        await c.put(url, r.clone());
+        c.keys().then(k => { if (k.length > 400) c.delete(k[0]); }).catch(() => {});
+      }
+      const u = URL.createObjectURL(await r.blob());
+      artMem.set(url, u); return u;
+    } catch (err) { return url; } // host without CORS: the browser's normal HTTP cache still applies
+  }
+  function setArt(el, url) {
+    const m = artMem.get(url);
+    if (m) { el.src = m; return; }
+    artSrc(url).then(u => { el.src = u; });
+  }
+
+  // ---------- played history (3x3 grid, 4 swipeable pages) ----------
+  const PLAYED_MAX = 36, PER_PAGE = 9;
+  let played = (() => { try { const l = JSON.parse(store.get('music_played') || '[]'); return Array.isArray(l) ? l.filter(e => e && e.key && e.title).slice(0, PLAYED_MAX) : []; } catch (e) { return []; } })();
+  const histPager = $('histPager'), histDots = $('histDots');
+  function recordPlayed(track) {
+    let e;
+    if (track.albumRef && !track.direct) {
+      const r = track.albumRef;
+      e = { key: 'album:' + r.type + ':' + r.id, kind: 'album', title: r.title, artist: r.artist || '', thumb: r.thumb || track.thumbnail || '', ref: r };
+    } else {
+      const { query, title, album, artist, thumbnail, trackNumber, albumRef } = track;
+      e = { key: 'track:' + normKey(query), kind: 'track', title, artist: artist || '', thumb: thumbnail || '', track: { query, title, album, artist, thumbnail, trackNumber, albumRef } };
+    }
+    played = [e, ...played.filter(p => p.key !== e.key)].slice(0, PLAYED_MAX);
+    store.set('music_played', JSON.stringify(played));
+    renderPlayed();
+  }
+  async function entryItems(e) {
+    if (e.kind === 'album') return albumItems(await loadAlbumDetail(e.ref));
+    return [{ ...e.track, candidates: null, direct: true }];
+  }
+  async function goToAlbum(e) {
+    const ref = e.kind === 'album' ? e.ref : (e.track && e.track.albumRef);
+    if (ref) { openAlbum(ref, null); return; }
+    // No known album (e.g. a song played from search): try to find it.
+    const name = (e.track && e.track.album) || e.title, seq = ++browseSeq; backTarget = null;
+    browseMessage('Album', name, 'Looking for the album…');
+    try {
+      const r = await searchAlbum({ album: name, artist: e.artist || '' });
+      if (seq !== browseSeq) return;
+      if (!r.albums.length) throw new Error('none');
+      const view = () => { browseSeq++; backTarget = null; renderAlbums(r.albums, 'Possible albums', name, view); };
+      view();
+    } catch (err) { if (seq === browseSeq) browseMessage('Album', name, 'Couldn’t find an album for this song.'); }
+  }
+  async function historyAct(e, act) {
+    if (act === 'album') { void goToAlbum(e); return; }
+    if (act === 'remove') { played = played.filter(p => p !== e); store.set('music_played', JSON.stringify(played)); renderPlayed(); return; }
+    let items;
+    try { items = await entryItems(e); } catch (err) { flash('Couldn’t load that album.', undefined, true); return; }
+    if (!items.length) return;
+    if (act === 'now') {
+      queue.unshift(...items.slice(1)); renderQueue();
+      histPager.scrollTo({ left: 0, behavior: 'smooth' });
+      void activateTrack(items[0]); return;
+    }
+    items.forEach(i => { i.playNext = act !== 'later'; });
+    if (act === 'next') queue.unshift(...items);
+    else if (act === 'after') { let at = 0; queue.forEach((q, i) => { if (q.playNext) at = i + 1; }); queue.splice(at, 0, ...items); }
+    else queue.push(...items);
+    renderQueue();
+    flash(act === 'next' ? 'Playing next' : act === 'after' ? 'Added after queued next' : 'Added to end of queue', e.title);
+    startQueueIfIdle();
+  }
+
+  // long-press (touch) / right-click (mouse) menu
+  const ctxMenu = $('ctxMenu');
+  function hideMenu() { ctxMenu.hidden = true; }
+  function showMenu(e, x, y) {
+    ctxMenu.replaceChildren(...[['now', 'Play now'], ['next', 'Play next'], ['after', 'Play after queued next'], ['later', 'Play later'], ['album', 'Go to album'], ['remove', 'Remove from history']].map(([act, label]) => {
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = label;
+      if (act === 'remove') b.className = 'danger';
+      b.addEventListener('click', () => { hideMenu(); void historyAct(e, act); });
+      return b;
+    }));
+    ctxMenu.hidden = false;
+    const r = ctxMenu.getBoundingClientRect();
+    ctxMenu.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
+    ctxMenu.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 8)) + 'px';
+    ctxMenu.firstChild.focus({ preventScroll: true });
+  }
+  document.addEventListener('pointerdown', ev => { if (!ctxMenu.hidden && !ctxMenu.contains(ev.target)) hideMenu(); }, true);
+  document.addEventListener('scroll', hideMenu, true);
+  window.addEventListener('resize', hideMenu);
+
+  function buildCell(e) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'hist-cell';
+    b.setAttribute('aria-label', 'Play ' + e.title + (e.artist ? ' by ' + e.artist : '') + '. Long press for more options.');
+    const art = document.createElement('div'); art.className = 'hist-art'; art.append(imageOrPlaceholder(e.thumb));
+    const t = document.createElement('strong'); t.textContent = e.title;
+    const a = document.createElement('span'); a.textContent = e.artist || (e.kind === 'album' ? 'Album' : '');
+    b.append(art, t, a);
+    let timer = null, sx = 0, sy = 0, fired = false;
+    const clear = () => { clearTimeout(timer); timer = null; };
+    b.addEventListener('pointerdown', ev => {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      fired = false; sx = ev.clientX; sy = ev.clientY; clear();
+      timer = setTimeout(() => { fired = true; showMenu(e, sx, sy); }, 450);
+    });
+    b.addEventListener('pointermove', ev => { if (timer && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 10) clear(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => b.addEventListener(n, clear));
+    b.addEventListener('click', ev => { if (fired) { fired = false; ev.preventDefault(); return; } void historyAct(e, 'now'); });
+    b.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); clear();
+      const r = b.getBoundingClientRect();
+      showMenu(e, ev.clientX || r.left + 12, ev.clientY || r.top + 12);
+    });
+    return b;
+  }
+  function renderPlayed() {
+    const keep = histPager.scrollLeft, pages = [];
+    for (let p = 0; p < PLAYED_MAX / PER_PAGE; p++) {
+      const page = document.createElement('div'); page.className = 'hist-page';
+      for (let i = 0; i < PER_PAGE; i++) {
+        const e = played[p * PER_PAGE + i];
+        if (e) page.append(buildCell(e));
+        else { const c = document.createElement('div'); c.className = 'hist-cell empty'; c.innerHTML = '<div class="hist-art"></div><strong></strong>'; page.append(c); }
+      }
+      pages.push(page);
+    }
+    histPager.replaceChildren(...pages); histPager.scrollLeft = keep;
+    $('histHint').hidden = played.length > 0;
+  }
+  for (let i = 0; i < PLAYED_MAX / PER_PAGE; i++) {
+    const d = document.createElement('button'); d.type = 'button'; d.setAttribute('aria-label', 'History page ' + (i + 1));
+    d.addEventListener('click', () => histPager.scrollTo({ left: i * histPager.clientWidth, behavior: 'smooth' }));
+    histDots.append(d);
+  }
+  function syncDots() { const i = Math.round(histPager.scrollLeft / (histPager.clientWidth || 1)); [...histDots.children].forEach((d, n) => d.classList.toggle('on', n === i)); }
+  histPager.addEventListener('scroll', syncDots, { passive: true });
+  syncDots();
+
+  // ---------- now-playing island ----------
+  const island = $('island'), islandBackdrop = $('islandBackdrop'); let islandKey = '';
+  function setIsland(open) { island.classList.toggle('open', open); islandBackdrop.hidden = !open; }
+  function updateIsland() {
+    const t = currentTrack || queue[0];
+    island.hidden = !t;
+    if (!t) { setIsland(false); islandKey = ''; return; }
+    const title = t.title || t.query, sub = t.artist || t.album || '', k = title + '|' + sub + '|' + (t.thumbnail || '');
+    if (k === islandKey) return; islandKey = k;
+    $('islandTitle').textContent = $('heroTitle').textContent = title;
+    $('islandArtist').textContent = $('heroArtist').textContent = sub;
+    $('islandArt').replaceChildren(imageOrPlaceholder(t.thumbnail));
+    $('heroArt').replaceChildren(imageOrPlaceholder(t.thumbnail));
+  }
+  const islandMini = $('islandMini');
+  islandMini.addEventListener('click', e => { if (!e.target.closest('#miniPlay')) setIsland(true); });
+  islandMini.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === islandMini) { e.preventDefault(); setIsland(true); } });
+  $('miniPlay').addEventListener('click', () => playBtn.click());
+  $('islandClose').addEventListener('click', () => setIsland(false));
+  islandBackdrop.addEventListener('click', () => setIsland(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { hideMenu(); setIsland(false); } });
+
   window.addEventListener('pagehide', () => { if (frame && currentTrack && !playbackFinished) saveCurrent(Number(seekBar.value)); });
   restoreCurrent();
   renderQueue();
-  renderBubbles();
+  renderPlayed();
 </script>
 </body>
 </html>
