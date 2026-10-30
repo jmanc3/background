@@ -1490,6 +1490,16 @@
   let played = (() => { try { const l = JSON.parse(store.get('music_played') || '[]'); return Array.isArray(l) ? l.filter(e => e && e.key && e.title).slice(0, PLAYED_MAX) : []; } catch (e) { return []; } })();
   const histPager = $('histPager'), histDots = $('histDots');
   function recordPlayed(track) {
+    // A song from an album already in history just bumps that album to the front.
+    if (track.albumRef) {
+      const key = 'album:' + track.albumRef.type + ':' + track.albumRef.id, hit = played.find(p => p.key === key);
+      if (hit) {
+        played = [hit, ...played.filter(p => p !== hit)];
+        store.set('music_played', JSON.stringify(played));
+        renderPlayed();
+        return;
+      }
+    }
     let e;
     if (track.albumRef && !track.direct) {
       const r = track.albumRef;
