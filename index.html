@@ -33,7 +33,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(120px, calc(100px + env(safe-area-inset-bottom))) max(16px, env(safe-area-inset-left));
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     overflow-x: hidden;
     overflow-y: auto;
     user-select: none;
@@ -220,7 +220,7 @@
 
 
   /* ---------- Played history: 4 swipeable pages of 3x3 ---------- */
-  .hist { width: min(100%, 480px); }
+  .hist { width: min(100%, 480px); padding-bottom: calc(110px + env(safe-area-inset-bottom)); } /* keeps the dots clear of the island */
   .hist-hint { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 12px; }
   .hist-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .hist-pager::-webkit-scrollbar { display: none; }
@@ -1555,7 +1555,7 @@
 
   function buildCell(e) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'hist-cell';
-    b.setAttribute('aria-label', 'Play ' + e.title + (e.artist ? ' by ' + e.artist : '') + '. Long press for more options.');
+    b.setAttribute('aria-label', (e.kind === 'album' ? 'Open ' : 'Play ') + e.title + (e.artist ? ' by ' + e.artist : '') + '. Long press for more options.');
     const art = document.createElement('div'); art.className = 'hist-art'; art.append(imageOrPlaceholder(e.thumb));
     const t = document.createElement('strong'); t.textContent = e.title;
     const a = document.createElement('span'); a.textContent = e.artist || (e.kind === 'album' ? 'Album' : '');
@@ -1569,7 +1569,7 @@
     });
     b.addEventListener('pointermove', ev => { if (timer && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 10) clear(); });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => b.addEventListener(n, clear));
-    b.addEventListener('click', ev => { if (fired) { fired = false; ev.preventDefault(); return; } void historyAct(e, 'now'); });
+    b.addEventListener('click', ev => { if (fired) { fired = false; ev.preventDefault(); return; } if (e.kind === 'album') void goToAlbum(e); else void historyAct(e, 'now'); });
     b.addEventListener('contextmenu', ev => {
       ev.preventDefault(); clear();
       const r = b.getBoundingClientRect();
